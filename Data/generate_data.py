@@ -1,16 +1,58 @@
 import pandas as pd
 import json
 import numpy as np
-import pickle
 import h5py
 import os
+import multiprocessing
+import gc
+
+WINDOW_SIZE = 10 # seconds
+
+def reduce_mem_usage(df):
+    start_mem = df.memory_usage().sum() / 1024**2
+    gc.collect()
+    print('Memory usage of dataframe is {:.2f} MB'.format(start_mem))
+
+    for col in df.columns:
+        col_type = df[col].dtype
+    if col_type != object:
+            c_min = df[col].min()
+            c_max = df[col].max()
+            if str(col_type)[:3] == 'int':
+                if c_min > np.iinfo(np.int8).min and c_max < np.iinfo(np.int8).max:
+                    df[col] = df[col].astype(np.int8)
+                elif c_min > np.iinfo(np.uint8).min and c_max < np.iinfo(np.uint8).max:
+                    df[col] = df[col].astype(np.uint8)
+                elif c_min > np.iinfo(np.int16).min and c_max < np.iinfo(np.int16).max:
+                    df[col] = df[col].astype(np.int16)
+                elif c_min > np.iinfo(np.uint16).min and c_max < np.iinfo(np.uint16).max:
+                    df[col] = df[col].astype(np.uint16)
+                elif c_min > np.iinfo(np.int32).min and c_max < np.iinfo(np.int32).max:
+                    df[col] = df[col].astype(np.int32)
+                elif c_min > np.iinfo(np.uint32).min and c_max < np.iinfo(np.uint32).max:
+                    df[col] = df[col].astype(np.uint32)
+                elif c_min > np.iinfo(np.int64).min and c_max < np.iinfo(np.int64).max:
+                    df[col] = df[col].astype(np.int64)
+                elif c_min > np.iinfo(np.uint64).min and c_max < np.iinfo(np.uint64).max:
+                    df[col] = df[col].astype(np.uint64)
+            elif str(col_type)[:5] == 'float':
+                if c_min > np.finfo(np.float16).min and c_max < np.finfo(np.float16).max:
+                    df[col] = df[col].astype(np.float16)
+                elif c_min > np.finfo(np.float32).min and c_max < np.finfo(np.float32).max:
+                    df[col] = df[col].astype(np.float32)
+                else:
+                    df[col] = df[col].astype(np.float64)
+
+    gc.collect()
+    end_mem = df.memory_usage().sum() / 1024**2
+    print('Memory usage after optimization is: {:.2f} MB'.format(end_mem))
+    print('Decreased by {:.1f}%'.format(100 * (start_mem - end_mem) / start_mem))
+    return df
 
 def first_filter(df):
 
-    for chunk in df:
-
+    def process_chunk(chunk):
         # Filter the lines by only getting the ones where the "type" column is "vector"
-
         chunk = chunk[chunk['type'] == 'vector']
 
         # Keep only the columns "module", "name", "vectime", and "vecvalue"
@@ -27,7 +69,7 @@ def first_filter(df):
         chunk = chunk[chunk['name'].str.contains('tx|rx|idle')]
 
         # Save to csv
-        chunk.to_csv('Data/first_filtered_results.csv', mode='a', index=False)
+        chunk.to_csv('first_filtered_results.csv', mode='a', index=False)
 
         # Print the first 5 rows of the chunk
 
@@ -35,6 +77,18 @@ def first_filter(df):
         pd.set_option('display.max_columns', None)
 
         #print(chunk.head())
+
+    # Create a multiprocessing pool
+    pool = multiprocessing.Pool()
+
+    for chunk in df:
+        # Apply the process_chunk function to each chunk
+        pool.apply_async(process_chunk, args=(chunk,))
+
+    # Close the pool
+    pool.close()
+    pool.join()
+    
 def second_filter(df):
 
     # Drop the "vectime" column
@@ -48,7 +102,7 @@ def second_filter(df):
     df['name'] = df['name'].str.extract(r'(txStart|txEnd|rxStart|rxEnd|idleStart|idleEnd)')
 
     # Load the JSON file with the vehicle start and end times
-    with open("Data/vehicle_start_end.json", "r") as file:
+    with open("vehicle_start_end.json", "r") as file:
         vehicle_start_end = json.load(file)
 
     # get the number of vehicles
@@ -70,6 +124,11 @@ def second_filter(df):
             print(f"Vehicle {vehicle} does not have idleStart or idleEnd values")
             print(f"Idle Start: {idle_start}")
             print(f"Idle End: {idle_end}")
+            continue
+        
+        duration_in_simulation = vehicle_start_end[vehicle]['end'] - vehicle_start_end[vehicle]['start']
+        if duration_in_simulation < WINDOW_SIZE:
+            print(f"Vehicle {vehicle} took less than window size ({WINDOW_SIZE}s) to complete the simulation")
             continue
     
         # These values are strings in the format 'float float float ... float'
@@ -95,7 +154,7 @@ def second_filter(df):
         print(f"Second Filter - Processed {processed/len(vehicles)*100:.2f}% of vehicles", end='\r')
 
     # Save to csv
-    df.to_csv('Data/second_filtered_results.csv', index=False)
+    df.to_csv('second_filtered_results.csv', index=False)
     
     print("Second Filter - Done")
 
@@ -162,7 +221,6 @@ def test_disparities(df):
 
     return count_of_differents, len(vehicles) - count_of_differents
 
-
 def remove_disparities(df):
     df_original = df.copy()
     df = df.copy()
@@ -207,7 +265,7 @@ def remove_disparities(df):
     df_original = df_original[~df_original['vehicle'].isin(vehicles_to_remove)]
 
     # Save to csv
-    df_original.to_csv('Data/no_disparity_filtered_results.csv', index=False)
+    df_original.to_csv('no_disparity_filtered_results.csv', index=False)
 
     return df_original
 
@@ -303,12 +361,12 @@ def separate_rx_idle(df):
 
 
     # Save to csv
-    df.to_csv('Data/separated_rx_idle_results.csv', index=False)
+    df.to_csv('separated_rx_idle_results.csv', index=False)
 
     print("Separated rx and idle")
     return df
 
-def generate_windows(df, window_size_in_seconds=10):
+def generate_windows(df, window_size_in_seconds=WINDOW_SIZE):
 
     window_size_in_ms = window_size_in_seconds * 1000.0
 
@@ -386,6 +444,7 @@ def generate_windows(df, window_size_in_seconds=10):
         while duration_index < len(durations) - 1:
 
             while current_duration < window_size_in_ms:
+                
                 if duration_index == len(durations):
                     #print("End of durations")
                     break
@@ -446,11 +505,11 @@ def generate_windows(df, window_size_in_seconds=10):
     print("Saving to hdf5 file (this takes a while)")
     # Remove the previous file if it exists
     try:
-        os.remove(f'Data/windows{window_size_in_seconds}s.hdf5')
+        os.remove(f'windows{window_size_in_seconds}s.hdf5')
     except:
         pass
     # Save to hdf5 file
-    with h5py.File(f'Data/windows{window_size_in_seconds}s.hdf5', 'a') as file:
+    with h5py.File(f'windows{window_size_in_seconds}s.hdf5', 'a') as file:
         for i, vehicle_windows in enumerate(all_windows):
             for j, window in enumerate(vehicle_windows):
                 total_number_of_windows += 1
@@ -465,7 +524,7 @@ def generate_windows(df, window_size_in_seconds=10):
     """ print("Saving to pickle file (this takes a while)")
     
     # Save the windows to a file
-    with open(f'Data/windows{window_size_in_seconds}s.pkl', 'wb') as file:
+    with open(f'windows{window_size_in_seconds}s.pkl', 'wb') as file:
         pickle.dump(all_windows, file) """
 
 
@@ -477,18 +536,18 @@ if __name__ == "__main__":
     # This script generates windows of the data from the raw simulation data. Uncomment all to do all steps.
     # You can comment steps already done to avoid repeating them.
 
-    # Apply first filter to the raw data
-    """ raw_file_path = 'Data/results.tar.xz'
+    """     # Apply first filter to the raw data
+    raw_file_path = 'results.tar.xz'
     df = pd.read_csv(raw_file_path, compression='infer', chunksize=10000)
     first_filter(df)
 
     # Apply second filter to the first filtered data
-    first_filtered_path = "Data/first_filtered_results.csv"
+    first_filtered_path = "first_filtered_results.csv"
     df = pd.read_csv(first_filtered_path)
     second_filter(df)
 
     # Test disparities
-    second_filtered_path = "Data/second_filtered_results.csv"
+    second_filtered_path = "second_filtered_results.csv"
     df = pd.read_csv(second_filtered_path)
     vehicles_with_disp_before, vehicles_without_disp_before = test_disparities(df)
 
@@ -506,14 +565,15 @@ if __name__ == "__main__":
    
 
     # Separate rx and idle
-    no_disparity_filtered_path = "Data/no_disparity_filtered_results.csv"
+    no_disparity_filtered_path = "no_disparity_filtered_results.csv"
     df = pd.read_csv(no_disparity_filtered_path)
-    df = separate_rx_idle(df)  """
-
-    """ # Generate windows
-    separated_rx_idle_path = "Data/separated_rx_idle_results.csv"
+    df = separate_rx_idle(df) """ 
+    
+    # Generate windows
+    separated_rx_idle_path = "separated_rx_idle_results.csv"
     df = pd.read_csv(separated_rx_idle_path)
-    generate_windows(df) """
+    df = reduce_mem_usage(df)
+    generate_windows(df)
    
 
 
