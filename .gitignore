@@ -1,0 +1,9 @@
+# Ignore the venv folder
+venv/
+
+# Ignore csv files, tar.xz files, .sca files, .json, and .hdf5 files
+*.csv
+*.tar.xz
+*.sca
+*.json
+*.hdf5

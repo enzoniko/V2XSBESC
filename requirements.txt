@@ -1,0 +1,4 @@
+pandas
+numpy
+h5py
+psutil
