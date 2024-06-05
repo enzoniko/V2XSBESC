@@ -8,3 +8,5 @@ venv/
 *.json
 *.hdf5
 *.npy
+*.html
+*.png
