@@ -7,3 +7,4 @@ venv/
 *.sca
 *.json
 *.hdf5
+*.npy

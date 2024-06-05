@@ -145,3 +145,7 @@ if __name__ == "__main__":
     print("Y:")
     for i in range(50, 55):
         print(Y[i])
+        
+    # Save to a new csv file
+    np.save('Data/X.npy', X)
+    np.save('Data/Y.npy', Y)

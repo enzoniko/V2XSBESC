@@ -51,8 +51,10 @@ def reduce_mem_usage(df):
 
 def first_filter(df):
 
-    def process_chunk(chunk):
+    for chunk in df:
+
         # Filter the lines by only getting the ones where the "type" column is "vector"
+
         chunk = chunk[chunk['type'] == 'vector']
 
         # Keep only the columns "module", "name", "vectime", and "vecvalue"
@@ -75,19 +77,6 @@ def first_filter(df):
 
         # Show all the columns when printing
         pd.set_option('display.max_columns', None)
-
-        #print(chunk.head())
-
-    # Create a multiprocessing pool
-    pool = multiprocessing.Pool()
-
-    for chunk in df:
-        # Apply the process_chunk function to each chunk
-        pool.apply_async(process_chunk, args=(chunk,))
-
-    # Close the pool
-    pool.close()
-    pool.join()
     
 def second_filter(df):
 
@@ -536,7 +525,7 @@ if __name__ == "__main__":
     # This script generates windows of the data from the raw simulation data. Uncomment all to do all steps.
     # You can comment steps already done to avoid repeating them.
 
-    """     # Apply first filter to the raw data
+    # Apply first filter to the raw data
     raw_file_path = 'results.tar.xz'
     df = pd.read_csv(raw_file_path, compression='infer', chunksize=10000)
     first_filter(df)
@@ -544,14 +533,17 @@ if __name__ == "__main__":
     # Apply second filter to the first filtered data
     first_filtered_path = "first_filtered_results.csv"
     df = pd.read_csv(first_filtered_path)
+    df = reduce_mem_usage(df)
     second_filter(df)
 
     # Test disparities
     second_filtered_path = "second_filtered_results.csv"
+    df = reduce_mem_usage(df)
     df = pd.read_csv(second_filtered_path)
     vehicles_with_disp_before, vehicles_without_disp_before = test_disparities(df)
 
     # Remove disparities
+    df = reduce_mem_usage(df)
     df = remove_disparities(df)
 
     # Test disparities again
@@ -567,7 +559,8 @@ if __name__ == "__main__":
     # Separate rx and idle
     no_disparity_filtered_path = "no_disparity_filtered_results.csv"
     df = pd.read_csv(no_disparity_filtered_path)
-    df = separate_rx_idle(df) """ 
+    df = reduce_mem_usage(df)
+    df = separate_rx_idle(df) 
     
     # Generate windows
     separated_rx_idle_path = "separated_rx_idle_results.csv"
