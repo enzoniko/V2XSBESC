@@ -9,6 +9,23 @@ import psutil
 
 WINDOW_SIZE = 10 # seconds
 
+# Create a decorator to measure the memory usage
+def measure_memory_usage(func):
+    def wrapper(*args, **kwargs):
+        process = psutil.Process()
+        mem_before = process.memory_info().rss  # Resident Set Size (RAM usage)
+
+        # Execute the function
+        result = func(*args, **kwargs)
+
+        mem_after = process.memory_info().rss
+        print(f"Memory usage: {(mem_after - mem_before)/1024**3} GB")
+
+        return result
+
+    return wrapper
+
+@measure_memory_usage
 def reduce_mem_usage(df):
     start_mem = df.memory_usage().sum() / 1024**2
     gc.collect()
@@ -50,6 +67,7 @@ def reduce_mem_usage(df):
     print('Decreased by {:.1f}%'.format(100 * (start_mem - end_mem) / start_mem))
     return df
 
+@measure_memory_usage
 def first_filter(df):
 
     for chunk in df:
@@ -79,6 +97,7 @@ def first_filter(df):
         # Show all the columns when printing
         pd.set_option('display.max_columns', None)
     
+@measure_memory_usage
 def second_filter(df):
 
     # Drop the "vectime" column
@@ -148,6 +167,7 @@ def second_filter(df):
     
     print("Second Filter - Done")
 
+@measure_memory_usage
 def test_disparities(df):
 
     df = df.copy()
@@ -211,6 +231,7 @@ def test_disparities(df):
 
     return count_of_differents, len(vehicles) - count_of_differents
 
+@measure_memory_usage
 def remove_disparities(df):
     df_original = df.copy()
     df = df.copy()
@@ -259,6 +280,7 @@ def remove_disparities(df):
 
     return df_original
 
+@measure_memory_usage
 def separate_rx_idle(df):
 
     df = df.copy()
@@ -356,6 +378,7 @@ def separate_rx_idle(df):
     print("Separated rx and idle")
     return df
 
+@measure_memory_usage
 def generate_windows(df, window_size_in_seconds=WINDOW_SIZE):
 
     window_size_in_ms = window_size_in_seconds * 1000.0
@@ -533,9 +556,10 @@ def generate_windows(df, window_size_in_seconds=WINDOW_SIZE):
 
     print("Generated windows")
 
-def generate_X_and_Y():
+@measure_memory_usage
+def sum_mode_durations_in_windows():
 
-    print("Generating X and Y data")
+    print("Summarizing mode durations in windows")
 
     with h5py.File(f'Data/windows{WINDOW_SIZE}s.hdf5', 'r') as file:
         # Create a dictionary to store all the data
@@ -559,84 +583,105 @@ def generate_X_and_Y():
             # Store the vehicle's data in the dictionary
             all_data[vehicle_key] = vehicle_data
 
-    # Generate X and Y data
-    # Where X are windows and Y are the immediate following windows
-    X = []
-    Y = []
+    processed_vehicles = 0
+
     for vehicle_key, vehicle_data in all_data.items():
-        for i in range(len(vehicle_data) - 1):
-            X.append(vehicle_data[i])
-            Y.append(vehicle_data[i+1])
 
-    # For each window, both in X and Y, summarize it to have only 3 values: Total duration in idle, total duration in rx and total duration in tx
-    # Considering that each window has multiple lists in the format [mode, duration]
-    windows_to_remove = []
-    processed_windows = 0
-    for i in range(len(X)):
+        # For each window, both in X and Y, summarize it to have only 3 values: Total duration in idle, total duration in rx and total duration in tx
+        for i in range(len(vehicle_data)):
 
-        # X
-        idle = 0
-        rx = 0
-        tx = 0
-        for j in range(len(X[i])):
-            if X[i][j][0] == 'idle':
-                idle += float(X[i][j][1])
-            elif X[i][j][0] == 'rx':
-                rx += float(X[i][j][1])
-            elif X[i][j][0] == 'tx':
-                tx += float(X[i][j][1])
+            idle = 0
+            rx = 0
+            tx = 0
+            for j in range(len(vehicle_data[i])):
+                if vehicle_data[i][j][0] == 'idle':
+                    idle += float(vehicle_data[i][j][1])
+                elif vehicle_data[i][j][0] == 'rx':
+                    rx += float(vehicle_data[i][j][1])
+                elif vehicle_data[i][j][0] == 'tx':
+                    tx += float(vehicle_data[i][j][1])
+            
+            vehicle_data[i] = [idle, rx, tx]
+
+        # Store the vehicle's data in the dictionary
+        all_data[vehicle_key] = vehicle_data
+
+        processed_vehicles += 1
+
+        print(f"Summarize mode durations in windows - Processed {processed_vehicles/len(all_data)*100:.2f}% of vehicles", end='\r')
+
+    # Save to hdf5 file
+    with h5py.File(f'Data/windows{WINDOW_SIZE}s_summarized.hdf5', 'a') as file:
+        for i, vehicle_windows in all_data.items():
+            for j, window in enumerate(vehicle_windows):
+                # Change the type to S32
+                window = np.array(window, dtype='S32')
+                
+                file.create_dataset(f'vehicle_{i}/window_{j}', data=window)
+
+    print("Summarized mode durations in windows")
+
+@measure_memory_usage
+def generate_X_and_Y(num_past_windows: int = 1):
+    print("Generating X and Y data")
+
+    with h5py.File(f'Data/windows{WINDOW_SIZE}s_summarized.hdf5', 'r') as file:
+        # Create a dictionary to store all the data
+        all_data = {}
         
-        X[i] = [idle, rx, tx]
+        # Iterate through the vehicles
+        for vehicle_key in file.keys():
+            vehicle_data = []
+            
+            # Iterate through the windows of each vehicle
+            for window_key in file[vehicle_key].keys():
+                # Read the dataset
+                window_data = file[f'{vehicle_key}/{window_key}'][:]
+                
+                # Convert the data from bytes to string if needed
+                window_data = np.char.decode(window_data, 'utf-8').astype(float)
+                
+                # Append to the vehicle's data
+                vehicle_data.append(window_data)
+            
+            # Store the vehicle's data in the dictionary
+            all_data[vehicle_key] = np.array(vehicle_data)
 
-        # Y
-        idle = 0
-        rx = 0
-        tx = 0
-        for j in range(len(Y[i])):
-            if Y[i][j][0] == 'idle':
-                idle += float(Y[i][j][1])
-            elif Y[i][j][0] == 'rx':
-                rx += float(Y[i][j][1])
-            elif Y[i][j][0] == 'tx':
-                tx += float(Y[i][j][1])
+    
 
-        Y[i] = [idle, rx, tx]
+    # Create the X and Y data
+    X, Y = [], []
+    
+    processed = 0
+    # Iterate through the windows of the vehicle and take num_past_windows as X and the next window as Y. Jump by num_past_windows
+    for vehicle_key, vehicle_data in all_data.items():
+        
+        # If the vehicle has less than num_past_windows + 1 windows, skip it
+        if len(vehicle_data) < num_past_windows + 1:
+            # Print the length of the vehicle's data
+            # print(f"Vehicle {vehicle_key} has {len(vehicle_data)} windows, skipping it")
+            continue
 
-        # If the sum of idle, rx and tx is not close to window_size_in_seconds*1000, then mark the window to be removed
-        if abs(sum(X[i]) - WINDOW_SIZE*1000) > WINDOW_SIZE*1000*0.02 or abs(sum(Y[i]) - WINDOW_SIZE*1000) > WINDOW_SIZE*1000*0.02:
-            """ print(f"Window {i} is not equal to {window_size_in_seconds}s")
-            print(f"X: {X[i]}")
-            print(f"Y: {Y[i]}")
-            print(f"Sum X: {sum(X[i])}")
-            print(f"Sum Y: {sum(Y[i])}") """
-            windows_to_remove.append(i)
+        # Iterate through the windows of the vehicle and take num_past_windows as X and the next window as Y. Jump by num_past_windows
+        for i in range(0, len(vehicle_data) - num_past_windows - 1, num_past_windows + 1):
+            if i + num_past_windows < len(vehicle_data):
+                X.append(vehicle_data[i:i+num_past_windows])
+                Y.append(vehicle_data[i+num_past_windows])
 
-        # Print the percentage of windows processed
-        processed_windows += 1
-        print(f"Generate X and Y - Processed {processed_windows/len(X)*100:.2f}% of windows", end='\r')
+        processed += 1
+        print(f"Generate X and Y data - Processed {processed/len(all_data)*100:.2f}% of vehicles", end='\r', flush=True)
 
+    X = np.array(X)
+    Y = np.array(Y)
 
-    # Print the number of windows to be removed
-    print(f"Number of windows to be removed: {len(windows_to_remove)}")
+    print(f"X shape: {X.shape}")
+    print(f"Y shape: {Y.shape}")
 
-    # Remove the windows that are not equal to window_size_in_seconds
-    # Sort the indices in descending order
-    windows_to_remove_sorted = sorted(windows_to_remove, reverse=True)
-
-    # Remove the elements from the lists
-    for i in windows_to_remove_sorted:
-        X.pop(i)
-        Y.pop(i)
-
-    # Save to a npy file
+    # Save to npy files
     np.save('Data/X.npy', X)
     np.save('Data/Y.npy', Y)
 
 if __name__ == "__main__":
-
-    # Track memory usage before loading data
-    process = psutil.Process()
-    mem_before = process.memory_info().rss  # Resident Set Size (RAM usage)
 
     # This script generates windows of the data from the raw simulation data. Uncomment all to do all steps.
     # You can comment steps already done to avoid repeating them.
@@ -685,17 +730,13 @@ if __name__ == "__main__":
     df = reduce_mem_usage(df)
     generate_windows(df)
    
-    # Generate X and Y data
-    generate_X_and_Y()
     
-
-    # Track memory usage after loading data
-    mem_after = process.memory_info().rss
-
-    # Calculate memory used
-    memory_used = (mem_after - mem_before) / (1024 * 1024)  # Convert to MB
-
-    # Print memory usage after processing
-    print(f"Memory used (GB): {memory_used/1024:.2f}")
-
+    # Summarize mode durations in windows
+    sum_mode_durations_in_windows()
     """
+
+    # Generate X and Y data
+    generate_X_and_Y(num_past_windows=2)
+
+
+    

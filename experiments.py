@@ -1,17 +1,10 @@
 
-""" 
-np.int = np.int32
-np.float = np.float64
-np.bool = np.bool_
+def experiment_baselineModels_results_vs_past_windows_number():
 
- """
-
-from preprocessing import preprocess
-from models import BaselineModels
-from Data.generate_data import generate_X_and_Y
-from ploting import plot_error_vs_past_windows
-
-def main():
+    from preprocessing import preprocess
+    from models import BaselineModels
+    from Data.generate_data import generate_X_and_Y
+    from ploting import plot_error_vs_past_windows
 
     # All possibilities of number of past_windows to experiment with
     past_windows_possibilities = list(range(1, 11))
@@ -39,6 +32,10 @@ def main():
 
         plot_error_vs_past_windows(results)
 
+
+def main():
+
+    experiment_baselineModels_results_vs_past_windows_number()
 
 if __name__ == "__main__":
     main()

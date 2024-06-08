@@ -10,23 +10,7 @@ np.bool = np.bool_
 
 from ydata_profiling import ProfileReport
 
-from Data.generate_data import WINDOW_SIZE
-
-# Create a decorator to measure the memory usage
-def measure_memory_usage(func):
-    def wrapper(*args, **kwargs):
-        process = psutil.Process()
-        mem_before = process.memory_info().rss  # Resident Set Size (RAM usage)
-
-        # Execute the function
-        result = func(*args, **kwargs)
-
-        mem_after = process.memory_info().rss
-        print(f"Memory usage: {(mem_after - mem_before)/1024**3} GB")
-
-        return result
-
-    return wrapper
+from Data.generate_data import WINDOW_SIZE, measure_memory_usage
 
 @measure_memory_usage
 def load_data():
@@ -42,16 +26,33 @@ def load_data():
 def scale_data(X_train, X_test, Y_train, Y_test):
     # Scale The Data
     X_scaler = MinMaxScaler()
+
+    # Reshape the data to 2D
+    original_shape_X_train = X_train.shape  
+    original_shape_X_test = X_test.shape
+    X_train = X_train.reshape(X_train.shape[0]*X_train.shape[1], X_train.shape[2])
+    X_test = X_test.reshape(X_test.shape[0]*X_test.shape[1], X_test.shape[2])
+
     X_train_scaled = X_scaler.fit_transform(X_train)
     X_test_scaled = X_scaler.transform(X_test)
+
+    # Reshape the data back to 3D
+    X_train_scaled = X_train_scaled.reshape(original_shape_X_train)
+    X_test_scaled = X_test_scaled.reshape(original_shape_X_test)
 
     Y_scaler = MinMaxScaler()
     Y_train_scaled = Y_scaler.fit_transform(Y_train)
     Y_test_scaled = Y_scaler.transform(Y_test)
 
-    return X_train_scaled, X_test_scaled, Y_train_scaled, Y_test_scaled
+    return X_train_scaled, X_test_scaled, Y_train_scaled, Y_test_scaled, Y_scaler
 
-def transform_to_df(X_train_scaled, X_test_scaled, Y_train_scaled, Y_test_scaled):
+def descale_data(Y_pred, Y_scaler):
+    # Descale the data
+    Y_pred_descaled = Y_scaler.inverse_transform(Y_pred)
+
+    return Y_pred_descaled
+
+""" def transform_to_df(X_train_scaled, X_test_scaled, Y_train_scaled, Y_test_scaled):
     # Transform numpy to dataframe
     columns = ["idle", "rx", "tx"]
     X_train_df = pd.DataFrame(X_train_scaled, columns=columns)
@@ -59,7 +60,7 @@ def transform_to_df(X_train_scaled, X_test_scaled, Y_train_scaled, Y_test_scaled
     Y_train_df = pd.DataFrame(Y_train_scaled, columns=columns)
     Y_test_df = pd.DataFrame(Y_test_scaled, columns=columns)
 
-    return X_train_df, X_test_df, Y_train_df, Y_test_df
+    return X_train_df, X_test_df, Y_train_df, Y_test_df """
 
 def generate_reports(X_train_df, X_test_df, Y_train_df, Y_test_df):
     # Generate reports
@@ -72,18 +73,20 @@ def preprocess():
     X_train, X_test, Y_train, Y_test = load_data()
 
     # Scale data
-    X_train_scaled, X_test_scaled, Y_train_scaled, Y_test_scaled = scale_data(X_train, X_test, Y_train, Y_test)
+    X_train_scaled, X_test_scaled, Y_train_scaled, Y_test_scaled, Y_scaler = scale_data(X_train, X_test, Y_train, Y_test)
 
     # Transform to dataframe
-    X_train_df, X_test_df, Y_train_df, Y_test_df = transform_to_df(X_train_scaled, X_test_scaled, Y_train_scaled, Y_test_scaled)
+    # X_train_df, X_test_df, Y_train_df, Y_test_df = transform_to_df(X_train_scaled, X_test_scaled, Y_train_scaled, Y_test_scaled)
+    #return X_train_df, X_test_df, Y_train_df, Y_test_df, Y_scaler
 
-    return X_train_df, X_test_df, Y_train_df, Y_test_df
+    return X_train_scaled, X_test_scaled, Y_train_scaled, Y_test_scaled, Y_scaler
+
 
 # Test the module
 if __name__ == "__main__":
 
     # Preprocess the data
-    X_train_df, X_test_df, Y_train_df, Y_test_df = preprocess()
+    X_train_scaled, X_test_scaled, Y_train_scaled, Y_test_scaled, Y_scaler = preprocess()
     
     # Generate reports
-    generate_reports(X_train_df, X_test_df, Y_train_df, Y_test_df)
+    # generate_reports(X_train_df, X_test_df, Y_train_df, Y_test_df)
