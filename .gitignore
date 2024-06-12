@@ -10,3 +10,7 @@ venv/
 *.npy
 *.html
 *.png
+*.log
+*.h5
+*.pyc
+__pycache__/

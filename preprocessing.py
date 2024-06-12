@@ -10,16 +10,16 @@ np.bool = np.bool_
 
 from ydata_profiling import ProfileReport
 
-from Data.generate_data import WINDOW_SIZE, measure_memory_usage
+from Data.generate_data import WINDOW_SIZE, measure_memory_usage, generate_X_and_Y
 
 @measure_memory_usage
-def load_data():
+def load_data(randomize=False):
     # Load X.npy and Y.npy
-    X = np.load("Data/X.npy")
-    Y = np.load("Data/Y.npy")
+    X = np.load("Data/data_with_noise/X.npy")
+    Y = np.load("Data/data_with_noise/Y.npy")
 
     # Separate in train and test
-    X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2, random_state=42)
+    X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2, random_state=42) if not randomize else train_test_split(X, Y, test_size=0.2)
 
     return X_train, X_test, Y_train, Y_test
 
@@ -68,9 +68,9 @@ def generate_reports(X_train_df, X_test_df, Y_train_df, Y_test_df):
         profile = ProfileReport(df, title=f"{name} Profiling Report", explorative=True)
         profile.to_file(f"EDAReports/{name}_profiling_report.html")
 
-def preprocess():
+def preprocess(randomize=False):
     # Load data
-    X_train, X_test, Y_train, Y_test = load_data()
+    X_train, X_test, Y_train, Y_test = load_data(randomize)
 
     # Scale data
     X_train_scaled, X_test_scaled, Y_train_scaled, Y_test_scaled, Y_scaler = scale_data(X_train, X_test, Y_train, Y_test)
@@ -85,8 +85,18 @@ def preprocess():
 # Test the module
 if __name__ == "__main__":
 
+    # Generate the data
+    generate_X_and_Y(6)
+
     # Preprocess the data
     X_train_scaled, X_test_scaled, Y_train_scaled, Y_test_scaled, Y_scaler = preprocess()
     
-    # Generate reports
+    # Generate reports: ONLY WORKS FOR 1 PAST WINDOW and 2D DF
     # generate_reports(X_train_df, X_test_df, Y_train_df, Y_test_df)
+
+    # Print the shape of the data
+    print(f"X_train_scaled shape: {X_train_scaled.shape}")
+    print(f"X_test_scaled shape: {X_test_scaled.shape}")
+    print(f"Y_train_scaled shape: {Y_train_scaled.shape}")
+    print(f"Y_test_scaled shape: {Y_test_scaled.shape}")
+    

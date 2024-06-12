@@ -8,6 +8,7 @@ import gc
 import psutil
 
 WINDOW_SIZE = 10 # seconds
+DATA_PATH = 'Data/data_with_noise/'
 
 # Create a decorator to measure the memory usage
 def measure_memory_usage(func):
@@ -90,7 +91,7 @@ def first_filter(df):
         chunk = chunk[chunk['name'].str.contains('tx|rx|idle')]
 
         # Save to csv
-        chunk.to_csv('first_filtered_results.csv', mode='a', index=False)
+        chunk.to_csv(f'{DATA_PATH}first_filtered_results.csv', mode='a', index=False)
 
         # Print the first 5 rows of the chunk
 
@@ -111,7 +112,7 @@ def second_filter(df):
     df['name'] = df['name'].str.extract(r'(txStart|txEnd|rxStart|rxEnd|idleStart|idleEnd)')
 
     # Load the JSON file with the vehicle start and end times
-    with open("vehicle_start_end.json", "r") as file:
+    with open(f"{DATA_PATH}vehicle_start_end.json", "r") as file:
         vehicle_start_end = json.load(file)
 
     # get the number of vehicles
@@ -163,7 +164,7 @@ def second_filter(df):
         print(f"Second Filter - Processed {processed/len(vehicles)*100:.2f}% of vehicles", end='\r')
 
     # Save to csv
-    df.to_csv('second_filtered_results.csv', index=False)
+    df.to_csv(f'{DATA_PATH}second_filtered_results.csv', index=False)
     
     print("Second Filter - Done")
 
@@ -276,7 +277,7 @@ def remove_disparities(df):
     df_original = df_original[~df_original['vehicle'].isin(vehicles_to_remove)]
 
     # Save to csv
-    df_original.to_csv('no_disparity_filtered_results.csv', index=False)
+    df_original.to_csv(f'{DATA_PATH}no_disparity_filtered_results.csv', index=False)
 
     return df_original
 
@@ -373,7 +374,7 @@ def separate_rx_idle(df):
 
 
     # Save to csv
-    df.to_csv('separated_rx_idle_results.csv', index=False)
+    df.to_csv(f'{DATA_PATH}separated_rx_idle_results.csv', index=False)
 
     print("Separated rx and idle")
     return df
@@ -397,6 +398,10 @@ def generate_windows(df, window_size_in_seconds=WINDOW_SIZE):
     # Create a list to store the windows for each vehicle
     all_windows = []
 
+    rx_durations = []
+    tx_durations = []
+    idle_durations = []
+    
     for vehicle, group in grouped_df:
 
         # Get the vecvalues for rxStart, rxEnd, idleStart, idleEnd, txStart, and txEnd if they exist
@@ -415,6 +420,15 @@ def generate_windows(df, window_size_in_seconds=WINDOW_SIZE):
         idle_end = list(map(float, idle_end[0].split())) if len(idle_end) > 0 else []
         tx_start = list(map(float, tx_start[0].split())) if len(tx_start) > 0 else []
         tx_end = list(map(float, tx_end[0].split())) if len(tx_end) > 0 else []
+
+        for i in range(len(rx_start)):
+            rx_durations.append(rx_end[i] - rx_start[i])
+
+        for i in range(len(idle_start)):
+            idle_durations.append(idle_end[i] - idle_start[i])
+        
+        for i in range(len(tx_start)):
+            tx_durations.append(tx_end[i] - tx_start[i])
 
         # Combine _start data into a single list of tuples (mode, time)
         start = [(mode, time*1000) for mode, time in zip(['rx']*len(rx_start) + ['idle']*len(idle_start) + ['tx']*len(tx_start), rx_start + idle_start + tx_start)]
@@ -531,6 +545,61 @@ def generate_windows(df, window_size_in_seconds=WINDOW_SIZE):
         processed += 1
         print(f"Generate Windows - Processed {processed/len(vehicles)*100:.2f}% of vehicles", end='\r')    
     
+
+
+    # Print the diff in durations
+    print("TX durations")
+    print(np.diff(tx_durations))
+
+    print("RX durations")
+    print(np.diff(rx_durations))
+
+    print("Idle durations")
+    print(np.diff(idle_durations))
+
+
+    # Create histograms for the durations in subplots
+    import matplotlib.pyplot as plt
+
+    # Plot the distribution of durations in subplots
+    fig, axs = plt.subplots(6, 1, figsize=(10, 10))
+
+    axs[0].hist(tx_durations, bins=100, color='blue')
+    axs[0].set_title('TX Durations')
+    axs[0].set_xlabel('Duration (ms)')
+    axs[0].set_ylabel('Frequency')
+
+    axs[1].hist(rx_durations, bins=100, color='green')
+    axs[1].set_title('RX Durations')
+    axs[1].set_xlabel('Duration (ms)')
+    axs[1].set_ylabel('Frequency')
+
+    axs[2].hist(idle_durations, bins=100, color='red')
+    axs[2].set_title('Idle Durations')
+    axs[2].set_xlabel('Duration (ms)')
+    axs[2].set_ylabel('Frequency')
+
+
+    # Plot histograms for the differences in durations
+    axs[3].hist(np.diff(tx_durations), bins=100, color='blue')
+    axs[3].set_title('TX Durations Differences')
+    axs[3].set_xlabel('Difference (ms)')
+    axs[3].set_ylabel('Frequency')
+
+    axs[4].hist(np.diff(rx_durations), bins=100, color='green')
+    axs[4].set_title('RX Durations Differences')
+    axs[4].set_xlabel('Difference (ms)')
+    axs[4].set_ylabel('Frequency')
+
+    axs[5].hist(np.diff(idle_durations), bins=100, color='red')
+    axs[5].set_title('Idle Durations Differences')
+    axs[5].set_xlabel('Difference (ms)')
+    axs[5].set_ylabel('Frequency')
+    
+
+    plt.savefig(f'{DATA_PATH}raw_durations_histogram.png')
+    plt.show()
+
     
     print("Number of vehicles in all_windows", len(all_windows))
     total_number_of_windows = 0
@@ -542,7 +611,7 @@ def generate_windows(df, window_size_in_seconds=WINDOW_SIZE):
     except:
         pass
     # Save to hdf5 file
-    with h5py.File(f'windows{window_size_in_seconds}s.hdf5', 'a') as file:
+    with h5py.File(f'{DATA_PATH}windows{window_size_in_seconds}s.hdf5', 'a') as file:
         for i, vehicle_windows in enumerate(all_windows):
             for j, window in enumerate(vehicle_windows):
                 total_number_of_windows += 1
@@ -556,12 +625,59 @@ def generate_windows(df, window_size_in_seconds=WINDOW_SIZE):
 
     print("Generated windows")
 
+def plot_tx_durations(all_data):
+
+    import matplotlib.pyplot as plt
+
+    all_tx_durations = []
+
+    all_rx_durations = []
+
+    all_idle_durations = []
+
+    # Plot the tx durations for each vehicle
+    for vehicle_key, vehicle_data in all_data.items():
+        # Get the tx durations
+        tx_durations = []
+
+        for window in vehicle_data:
+            for j in range(len(window)):
+                if window[j][0] == 'tx':
+                    all_tx_durations.append(float(window[j][1]))
+
+                if window[j][0] == 'rx':
+                    all_rx_durations.append(float(window[j][1]))
+
+                if window[j][0] == 'idle':
+                    all_idle_durations.append(float(window[j][1]))
+
+
+    # Plot the distribution of durations in subplots
+    fig, axs = plt.subplots(3, 1, figsize=(10, 10))
+
+    axs[0].hist(all_tx_durations, bins=100, color='blue')
+    axs[0].set_title('TX Durations')
+    axs[0].set_xlabel('Duration (ms)')
+    axs[0].set_ylabel('Frequency')
+
+    axs[1].hist(all_rx_durations, bins=100, color='green')
+    axs[1].set_title('RX Durations')
+    axs[1].set_xlabel('Duration (ms)')
+    axs[1].set_ylabel('Frequency')
+
+    axs[2].hist(all_idle_durations, bins=100, color='red')
+    axs[2].set_title('Idle Durations')
+    axs[2].set_xlabel('Duration (ms)')
+    axs[2].set_ylabel('Frequency')
+
+    plt.show()
+
 @measure_memory_usage
 def sum_mode_durations_in_windows():
 
     print("Summarizing mode durations in windows")
 
-    with h5py.File(f'Data/windows{WINDOW_SIZE}s.hdf5', 'r') as file:
+    with h5py.File(f'{DATA_PATH}windows{WINDOW_SIZE}s.hdf5', 'r') as file:
         # Create a dictionary to store all the data
         all_data = {}
         
@@ -582,6 +698,8 @@ def sum_mode_durations_in_windows():
             
             # Store the vehicle's data in the dictionary
             all_data[vehicle_key] = vehicle_data
+
+    plot_tx_durations(all_data)
 
     processed_vehicles = 0
 
@@ -611,7 +729,7 @@ def sum_mode_durations_in_windows():
         print(f"Summarize mode durations in windows - Processed {processed_vehicles/len(all_data)*100:.2f}% of vehicles", end='\r')
 
     # Save to hdf5 file
-    with h5py.File(f'Data/windows{WINDOW_SIZE}s_summarized.hdf5', 'a') as file:
+    with h5py.File(f'{DATA_PATH}windows{WINDOW_SIZE}s_summarized.hdf5', 'a') as file:
         for i, vehicle_windows in all_data.items():
             for j, window in enumerate(vehicle_windows):
                 # Change the type to S32
@@ -625,7 +743,7 @@ def sum_mode_durations_in_windows():
 def generate_X_and_Y(num_past_windows: int = 1):
     print("Generating X and Y data")
 
-    with h5py.File(f'Data/windows{WINDOW_SIZE}s_summarized.hdf5', 'r') as file:
+    with h5py.File(f'{DATA_PATH}windows{WINDOW_SIZE}s_summarized.hdf5', 'r') as file:
         # Create a dictionary to store all the data
         all_data = {}
         
@@ -669,17 +787,17 @@ def generate_X_and_Y(num_past_windows: int = 1):
                 Y.append(vehicle_data[i+num_past_windows])
 
         processed += 1
-        print(f"Generate X and Y data - Processed {processed/len(all_data)*100:.2f}% of vehicles", end='\r', flush=True)
+        #print(f"Generate X and Y data - Processed {processed/len(all_data)*100:.2f}% of vehicles", end='\r', flush=True)
 
     X = np.array(X)
     Y = np.array(Y)
 
-    print(f"X shape: {X.shape}")
-    print(f"Y shape: {Y.shape}")
+    #print(f"X shape: {X.shape}")
+    #print(f"Y shape: {Y.shape}")
 
     # Save to npy files
-    np.save('Data/X.npy', X)
-    np.save('Data/Y.npy', Y)
+    np.save(f'{DATA_PATH}X.npy', X)
+    np.save(f'{DATA_PATH}Y.npy', Y)
 
 if __name__ == "__main__":
 
@@ -687,18 +805,18 @@ if __name__ == "__main__":
     # You can comment steps already done to avoid repeating them.
 
     """ # Apply first filter to the raw data
-    raw_file_path = 'results.tar.xz'
+    raw_file_path = f'{DATA_PATH}results.tar.xz'
     df = pd.read_csv(raw_file_path, compression='infer', chunksize=10000)
     first_filter(df)
 
     # Apply second filter to the first filtered data
-    first_filtered_path = "first_filtered_results.csv"
+    first_filtered_path = f"{DATA_PATH}first_filtered_results.csv"
     df = pd.read_csv(first_filtered_path)
     df = reduce_mem_usage(df)
     second_filter(df)
 
     # Test disparities
-    second_filtered_path = "second_filtered_results.csv"
+    second_filtered_path = f"{DATA_PATH}second_filtered_results.csv"
     df = reduce_mem_usage(df)
     df = pd.read_csv(second_filtered_path)
     vehicles_with_disp_before, vehicles_without_disp_before = test_disparities(df)
@@ -718,14 +836,14 @@ if __name__ == "__main__":
      
       
     # Separate rx and idle
-    no_disparity_filtered_path = "no_disparity_filtered_results.csv"
+    no_disparity_filtered_path = f"{DATA_PATH}no_disparity_filtered_results.csv"
     df = pd.read_csv(no_disparity_filtered_path)
     df = reduce_mem_usage(df)
     df = separate_rx_idle(df) 
-    
+     """
    
     # Generate windows
-    separated_rx_idle_path = "separated_rx_idle_results.csv"
+    separated_rx_idle_path = f"{DATA_PATH}separated_rx_idle_results.csv"
     df = pd.read_csv(separated_rx_idle_path)
     df = reduce_mem_usage(df)
     generate_windows(df)
@@ -733,7 +851,7 @@ if __name__ == "__main__":
     
     # Summarize mode durations in windows
     sum_mode_durations_in_windows()
-    """
+   
 
     # Generate X and Y data
     generate_X_and_Y(num_past_windows=2)
