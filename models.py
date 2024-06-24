@@ -3,27 +3,35 @@ from sklearn.linear_model import LinearRegression
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 from sklearn.multioutput import MultiOutputRegressor
 from sklearn.neural_network import MLPRegressor
-from sklearn.metrics import mean_absolute_error, mean_squared_error
+from sklearn.metrics import mean_absolute_error
+from sklearn.model_selection import GridSearchCV
 from ploting import plot_results
 
 
 from keras.models import Sequential
-from keras.layers import LSTM, Dense, Conv1D, MaxPooling1D, Flatten, BatchNormalization, RepeatVector, TimeDistributed, GRU
+from keras.layers import LSTM, Dense, Conv1D, MaxPooling1D, Flatten, BatchNormalization, GRU
 from keras import regularizers, optimizers
 from tcn import TCN
 from keras.optimizers import Adam
 
-import numpy as np
+import time
 
+import numpy as np
+import joblib
 
 # Simple models to use as a baseline
 class BaselineModels:
     def __init__(self):
         self.models = {
-            "Linear Regression": LinearRegression(),
-            "Random Forest": RandomForestRegressor(),
-            "Gradient Boosting": MultiOutputRegressor(GradientBoostingRegressor()),
-            "MLP": MLPRegressor(hidden_layer_sizes=(100, 50), max_iter=500)
+            #"Linear Regression": LinearRegression(),
+            "Random Forest": RandomForestRegressor(bootstrap=True, verbose=2, n_jobs=24, oob_score=True, max_depth=10)
+            #"Gradient Boosting": MultiOutputRegressor(GradientBoostingRegressor()),
+            #"MLP": MLPRegressor(hidden_layer_sizes=(100, 50), max_iter=500)
+        }
+
+        self.param_grid_RF = {
+            'n_estimators': [50, 100, 200, 300],
+            'max_depth': [10, 20, 30, 50]
         }
 
     def reshape_to_2d(self, X, Y):
@@ -42,7 +50,13 @@ class BaselineModels:
     def evaluate_model(self, model, X_test, Y_test, X_train, Y_train):
 
         score = model.score(X_test, Y_test)
+
+        start_time = time.time()
+
         predictions = model.predict(X_test)
+
+        end_time = time.time()
+        print(f'Average Time taken for each prediction: {(end_time - start_time)/X_test.shape[0]}')
         mae_test = mean_absolute_error(Y_test, predictions)
 
         X_all = np.concatenate((X_train, X_test), axis=0)
@@ -71,12 +85,109 @@ class BaselineModels:
             predictions = Y_scaler.inverse_transform(predictions)
             
 
-            plot_results(Y_test_descaled, predictions, model_name, mae_all, mae_test, past_windows)
+            plot_results(Y_test_descaled, predictions, model_name, mae_all, mae_test, past_windows=past_windows)
 
             maes[model_name] = mae_test
 
         return maes
     
+class BaselineModels:
+    def __init__(self):
+        self.models = {
+            #"Linear Regression": LinearRegression(),
+            "Random Forest": RandomForestRegressor(n_jobs=24)
+            #"Gradient Boosting": MultiOutputRegressor(GradientBoostingRegressor()),
+            #"MLP": MLPRegressor(hidden_layer_sizes=(100, 50), max_iter=500)
+        }
+
+        self.param_grid_RF = {
+            'n_estimators': [100],
+            'max_depth': [50]
+        }
+
+    def reshape_to_2d(self, X, Y):
+        # If X shape is 3D, reshape it to 2D
+        if len(X.shape) == 3:
+            X = X.reshape(X.shape[0], X.shape[1] * X.shape[2])
+        return X, Y
+    
+    def train_model(self, model, X_train, Y_train):
+        # Check if the model is RandomForestRegressor to apply grid search
+        if isinstance(model, RandomForestRegressor):
+            grid_search = GridSearchCV(estimator=model, param_grid=self.param_grid_RF, cv=5, scoring='neg_mean_absolute_error', n_jobs=1, verbose=2)
+            grid_search.fit(X_train, Y_train)
+            print(f"Best parameters for Random Forest: {grid_search.best_params_}")
+            return grid_search.best_estimator_
+        else:
+            model.fit(X_train, Y_train)
+            return model
+
+    def evaluate_model(self, model, X_test, Y_test, X_train, Y_train):
+        score = model.score(X_test, Y_test)
+
+        start_time = time.time()
+        predictions = model.predict(X_test)
+        end_time = time.time()
+        
+        print(f'Average Time taken for each prediction: {(end_time - start_time) / X_test.shape[0]}')
+        
+        mae_test = mean_absolute_error(Y_test, predictions)
+
+        X_all = np.concatenate((X_train, X_test), axis=0)
+        Y_all = np.concatenate((Y_train, Y_test), axis=0)
+        predictions_all = model.predict(X_all)
+        mae_all = mean_absolute_error(Y_all, predictions_all)
+
+        return score, predictions, mae_all, mae_test
+
+    def train_and_evaluate(self, X_train, X_test, Y_train, Y_test, Y_scaler, past_windows):
+        X_train, Y_train = self.reshape_to_2d(X_train, Y_train)
+        X_test, Y_test = self.reshape_to_2d(X_test, Y_test)
+
+        Y_test_descaled = Y_scaler.inverse_transform(Y_test)
+
+        maes = {}
+
+        for model_name, model in self.models.items():
+            print(f"Training {model_name}...")
+            model = self.train_model(model, X_train, Y_train)
+
+            # Save the model
+            joblib.dump(model, f'Models/{model_name}/random_forest.joblib')
+
+            score, predictions, mae_all, mae_test = self.evaluate_model(model, X_test, Y_test, X_train, Y_train)
+            print(f"{model_name} - Score: {score}, MAE_ALL: {mae_all}, MAE_TEST: {mae_test}")
+
+            # Descale the data
+            predictions = Y_scaler.inverse_transform(predictions)
+
+            plot_results(Y_test_descaled, predictions, model_name, mae_all, mae_test, past_windows=past_windows)
+
+            maes[model_name] = mae_test
+
+        return maes
+
+""" def build_ANN_model(input_shape, units=10, **kwargs):
+    model = Sequential()
+    model.add(Dense(units, input_shape=input_shape, activation='tanh', kernel_regularizer=regularizers.l2(0.01)))
+    model.add(Flatten())
+    model.add(Dense(2))
+    adam = optimizers.Adam(clipvalue=0.5, learning_rate=0.0001)
+    model.compile(optimizer=adam, loss='mae')
+    return model
+ """
+
+# Simpler ANN model to attempt embedding
+def build_ANN_model(input_shape, units=10, **kwargs):
+    model = Sequential()
+    model.add(Flatten(input_shape=input_shape))  # Flatten the input inside the model
+    model.add(Dense(units, activation='relu'))
+    model.add(Dense(2))
+    adam = Adam(learning_rate=0.0001)
+    model.compile(optimizer=adam, loss='mae')
+    return model
+
+
 def build_LSTM_model(input_shape, units=50, **kwargs):
     model = Sequential()
     model.add(LSTM(units, activation='tanh', input_shape=input_shape, return_sequences=True, kernel_regularizer=regularizers.l2(0.01)))
@@ -87,12 +198,21 @@ def build_LSTM_model(input_shape, units=50, **kwargs):
     model.compile(optimizer=adam, loss='mae')
     return model
 
-def build_GRU_model(input_shape, units=100, l2=0.0001, **kwargs):
+""" def build_GRU_model(input_shape, units=100, l2=0.0001, **kwargs):
     model = Sequential()
     model.add(GRU(units, activation='tanh', return_sequences=True, input_shape=input_shape, kernel_regularizer=regularizers.l2(l2)))
     model.add(BatchNormalization())
     model.add(GRU(units, activation='tanh', return_sequences=False, kernel_regularizer=regularizers.l2(l2)))
-    model.add(Dense(3))
+    model.add(Dense(2))
+    adam = optimizers.Adam(clipvalue=0.5)
+    model.compile(optimizer=adam, loss='mae')
+    return model """
+
+# Simpler GRU model to attempt embedding
+def build_GRU_model(input_shape, units=10, l2=0.0001, **kwargs):
+    model = Sequential()
+    model.add(GRU(units, activation='relu', return_sequences=False, input_shape=input_shape))
+    model.add(Dense(2))
     adam = optimizers.Adam(clipvalue=0.5)
     model.compile(optimizer=adam, loss='mae')
     return model
@@ -102,7 +222,7 @@ def build_TCN_model(input_shape, **kwargs):
     model.add(TCN(nb_filters=64, kernel_size=3, activation='tanh', input_shape=input_shape, return_sequences=False))
     model.add(Dense(100, activation='tanh', kernel_regularizer=regularizers.l2(0.01)))
     model.add(Flatten())
-    model.add(Dense(3, activation='tanh'))
+    model.add(Dense(2, activation='tanh'))
     model.compile(optimizer='adam', loss='mae')
     return model
 
@@ -149,6 +269,7 @@ def build_CNNLSTM_model(input_shape, CNN_layers=1, CNN_filters=100, CNN_kernel_s
     return model
 
 models_mapping = {
+    'ANN': build_ANN_model,
     'LSTM': build_LSTM_model,
     'GRU': build_GRU_model,
     'TCN': build_TCN_model,

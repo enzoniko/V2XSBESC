@@ -1,6 +1,6 @@
 from preprocessing import preprocess
 from callbacks import assemble_callbacks
-from Data.generate_data import generate_X_and_Y
+from Data.generate_x_and_y import generate_X_and_Y
 from models import build_model
 from training import train_with_kfold
 from predicting import make_predictions
@@ -9,6 +9,7 @@ from ploting import plot_results
 import os
 import sys
 from time import time
+import numpy as np
 
 def pipeline(model_name, use_kfold=False, return_test_preds=True, num_past_windows=None, X_train=None, X_test=None, Y_train=None, Y_test=None, Y_scaler=None):
 
@@ -19,6 +20,12 @@ def pipeline(model_name, use_kfold=False, return_test_preds=True, num_past_windo
     # Get the preprocessed data
     if X_train is None:
         X_train, X_test, Y_train, Y_test, Y_scaler = preprocess()
+
+    np.save('X_train.npy', X_train)
+    np.save('X_test.npy', X_test)
+    np.save('Y_train.npy', Y_train)
+    np.save('Y_test.npy', Y_test)
+    
 
     # Print the shape of the data
     print(f"X_train_scaled shape: {X_train.shape}")
@@ -69,13 +76,13 @@ def pipeline(model_name, use_kfold=False, return_test_preds=True, num_past_windo
     model.load_weights(f'Models/{model_name}/best_model_final.h5')
 
     # Make predictions
-    Y, Y_pred, Y_test_descaled, Y_test_pred_descaled, error, error_test = make_predictions(model, X_train, X_test, Y_train, Y_test, Y_scaler)
+    Y, Y_pred, Y_test_descaled, Y_test_pred_descaled, error, error_test, error_test_std = make_predictions(model, X_train, X_test, Y_train, Y_test, Y_scaler)
 
     print("Shape of Y_test_descaled:", Y_test_descaled.shape)
     print("Shape of Y_test_pred_descaled:", Y_test_pred_descaled.shape)
 
     # Plot the results
-    plot_results(Y_test_descaled, Y_test_pred_descaled, model_name, error, error_test, num_past_windows)
+    plot_results(Y_test_descaled, Y_test_pred_descaled, model_name, error, error_test, error_test_std, num_past_windows)
 
     # Print the time taken to train the model
     print(f"Time taken to train the model: {end_time - start_time} seconds")

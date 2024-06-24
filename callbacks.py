@@ -12,15 +12,15 @@ class TerminateNaN(Callback):
 
 def assemble_callbacks(name):
     # Save the best model during training
-    model_checkpoint = ModelCheckpoint(f'Models/{name}best_model.h5', monitor='val_loss', mode='min', verbose=1, save_best_only=True)
+    model_checkpoint = ModelCheckpoint(f'Models/{name}best_model.h5', monitor='loss', mode='min', verbose=1, save_best_only=True)
 
     # Stop training when the loss or validation loss is not valid
     terminate_nan = TerminateNaN()
 
     # Stop training when the validation loss has stopped decreasing for 15 epochs
-    early_stopping = EarlyStopping(monitor='val_loss', patience=15)
+    early_stopping = EarlyStopping(monitor='loss', patience=4)
 
     # Reduce learning rate when the validation loss has stopped decreasing for 5 epochs
-    reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.2, patience=5, min_lr=0.0001)
+    reduce_lr = ReduceLROnPlateau(monitor='loss', factor=0.2, patience=2, min_lr=0.0001)
 
     return [reduce_lr, terminate_nan, early_stopping, model_checkpoint]

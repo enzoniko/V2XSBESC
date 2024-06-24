@@ -2,9 +2,7 @@ from preprocessing import descale_data
 import numpy as np
 # Import mean percentage error function
 from keras.losses import mean_absolute_error
-from matplotlib import pyplot as plt
-import pandas as pd
-import os
+
 
 def make_predictions(model, X_train, X_test, Y_train, Y_test, Y_scaler):
     
@@ -66,7 +64,12 @@ def make_predictions(model, X_train, X_test, Y_train, Y_test, Y_scaler):
 
     # Get the mean percentage error for the test set
     error_test = mean_absolute_error(Y_test, Y_test_pred).numpy()
-    
-    error_test = np.mean(error_test)
 
-    return Y, Y_pred, Y_test_descaled, Y_test_pred_descaled, error, error_test
+    print("SHAPE ERROR", error_test.shape)
+    error_test_std = np.std(error_test)
+
+    print("STD DEV ERROR TEST:", error_test_std)
+    error_test = np.mean(error_test)
+   
+
+    return Y, Y_pred, Y_test_descaled, Y_test_pred_descaled, error, error_test, error_test_std

@@ -35,8 +35,10 @@ def train_with_kfold(model_name, X_train, Y_train, X_test, Y_test, callbacks, us
         # Build the model
         model = build_model(model_name, X_train.shape[1:])
 
+        print(model.summary())
+
         # Train the model on the current fold and store the history
-        history = model.fit(X_train_fold, Y_train_fold, validation_data=(X_val_fold, Y_val_fold), epochs=10, verbose=1, callbacks=callbacks)
+        history = model.fit(X_train_fold, Y_train_fold, validation_data=(X_val_fold, Y_val_fold), epochs=1500, verbose=1, callbacks=callbacks)
 
         # Concatenate the history
         all_history.history['loss'].extend(history.history['loss'])

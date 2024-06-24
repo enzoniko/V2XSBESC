@@ -1,9 +1,10 @@
 import json
+from Data.clean_sim_data_and_separate_rx_and_idle import DATA_PATH
 
 if __name__ == "__main__":
 
     # Open the file "General-#0.sca"
-    with open("Data/data_with_noise/General-#0.sca", "r") as file:
+    with open(f"{DATA_PATH}General-#0.sca", "r") as file:
         lines = file.readlines()
 
     # Get the lines that start with "scalar"
@@ -47,5 +48,5 @@ if __name__ == "__main__":
         print(f"Vehicle {vehicle}: Start time: {times['start']}, End time: {times['end']}") """
 
     # Save the vehicle start and end times to a file
-    with open("Data/data_with_noise/vehicle_start_end.json", "w") as file:
+    with open(f"{DATA_PATH}vehicle_start_end.json", "w") as file:
         json.dump(vehicle_start_end, file, indent=4)

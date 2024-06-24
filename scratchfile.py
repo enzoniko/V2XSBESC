@@ -8,7 +8,7 @@ np.bool = np.bool_
 
 from preprocessing import preprocess
 from models import BaselineModels
-from Data.generate_data import generate_X_and_Y
+from Data.generate_x_and_y import generate_X_and_Y
 from ploting import plot_error_vs_past_windows
 
 def main():

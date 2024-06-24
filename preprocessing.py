@@ -10,16 +10,15 @@ np.bool = np.bool_
 
 from ydata_profiling import ProfileReport
 
-from Data.generate_data import WINDOW_SIZE, measure_memory_usage, generate_X_and_Y
+from Data.generate_x_and_y import DATA_PATH, generate_X_and_Y
 
-@measure_memory_usage
 def load_data(randomize=False):
     # Load X.npy and Y.npy
-    X = np.load("Data/data_with_noise/X.npy")
-    Y = np.load("Data/data_with_noise/Y.npy")
+    X = np.load(f"{DATA_PATH}X.npy")
+    Y = np.load(f"{DATA_PATH}Y.npy")
 
     # Separate in train and test
-    X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2, random_state=42) if not randomize else train_test_split(X, Y, test_size=0.2)
+    X_train, X_test, Y_train, Y_test = train_test_split(X, Y, train_size=0.80, test_size=0.20, random_state=42) if not randomize else train_test_split(X, Y, test_size=0.2)
 
     return X_train, X_test, Y_train, Y_test
 
