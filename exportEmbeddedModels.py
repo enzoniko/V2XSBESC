@@ -123,11 +123,11 @@ def export_model(model_name):
         Y_train_feature2 = Y_train[:, 1]  # Second feature of Y
         
         # Create RandomForestRegressor for feature 1
-        rf_feature1 = RandomForestRegressor(n_jobs=24)
+        rf_feature1 = RandomForestRegressor(n_jobs=24, n_estimators=10, max_depth=5, oob_score=True)
         rf_feature1.fit(X_train.reshape(X_train.shape[0], -1), Y_train_feature1) 
 
         # Create RandomForestRegressor for feature 2
-        rf_feature2 = RandomForestRegressor(n_jobs=24)
+        rf_feature2 = RandomForestRegressor(n_jobs=24, n_estimators=10, max_depth=5, oob_score=True)
         rf_feature2.fit(X_train.reshape(X_train.shape[0], -1), Y_train_feature2)
 
         # Predictions for feature 1
