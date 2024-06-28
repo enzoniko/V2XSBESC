@@ -3,3 +3,8 @@ numpy
 h5py
 psutil
 emlearn
+scikit-learn
+tensorflow
+keras
+ydata_profiling
+keras-tcn
