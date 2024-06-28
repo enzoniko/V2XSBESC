@@ -51,7 +51,7 @@ parameters = {
         'dense_units': [10, 50, 100]
     },
     'GRU': {
-        'units': [10, 50, 100],
+        'units': [10, 50, 100, 150, 200],
         'l2': [0.1, 0.01, 0.001],
 
     },
@@ -61,7 +61,7 @@ parameters = {
     }
 }
 
-parameters = {
+""" parameters = {
 
     'TCN': {
         'num_filters': [16],
@@ -78,7 +78,7 @@ parameters = {
         'units': [10],
         'l2': [0.1, 0.01]
     }
-}
+} """
 
 from itertools import product
 
@@ -121,10 +121,10 @@ def experiment_all_models_results_vs_past_windows_number():
     }
 
     best_parameters = {
-        'Random Forest': None,
-        'TCN': None,
-        'GRU': None,
-        'ANN': None
+        'Random Forest': [],
+        'TCN': [],
+        'GRU': [],
+        'ANN': []
     }
 
     for past_windows in past_windows_possibilities:
@@ -133,7 +133,7 @@ def experiment_all_models_results_vs_past_windows_number():
         # Load the dataframes
         X_train_scaled, X_test_scaled, Y_train_scaled, Y_test_scaled, Y_scaler = preprocess(randomize=True)
 
-        baseline_models = BaselineModels()
+        """ baseline_models = BaselineModels()
 
         # Adapted BaselineModels to only run Grid Search with RF, returning the best_parameters too
         maes, best_parameters_RF = baseline_models.train_and_evaluate(X_train_scaled, X_test_scaled, Y_train_scaled, Y_test_scaled, Y_scaler, past_windows)
@@ -143,8 +143,8 @@ def experiment_all_models_results_vs_past_windows_number():
                 results[model_name].append(mae)
 
         best_parameters['Random Forest'] = (best_parameters_RF, past_windows)
-
-        for model_name in ['TCN', 'GRU', 'ANN']:
+        """
+        for model_name in ['TCN', 'GRU']:
             param_grid = parameters[model_name]
             combinations = generate_combinations(param_grid)
             best_error = float('inf')
@@ -161,7 +161,6 @@ def experiment_all_models_results_vs_past_windows_number():
                                                                 Y_scaler=Y_scaler, 
                                                                 model_params = params,
                                                                 use_kfold=False)
-                    results[model_name].append(error_test)
                 
                     if error_test < best_error:
                         best_error = error_test
@@ -171,7 +170,7 @@ def experiment_all_models_results_vs_past_windows_number():
                     continue
 
             results[model_name].append(best_error)
-            best_parameters[model_name] = (best_params, past_windows)
+            best_parameters[model_name].append((best_params, past_windows, best_error))
             
 
         plot_error_vs_past_windows(results)
