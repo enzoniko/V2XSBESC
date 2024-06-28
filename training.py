@@ -7,7 +7,10 @@ import os
 def train_with_kfold(model_name, X_train, Y_train, X_test, Y_test, callbacks, use_kfold=True, model_parameters=None) -> tuple:
 
     # Redirect the output to a log file
-    sys.stdout = open(f'Logs/{model_name}_training.log', 'a')
+    log_file = f'Logs/{model_name}_training.log'
+    if not os.path.exists(log_file):
+        os.makedirs(os.path.dirname(log_file), exist_ok=True)
+    sys.stdout = open(log_file, 'a')
 
     # Create a KFold object with 5 splits
     kf = KFold(n_splits=5, shuffle=False)
@@ -22,6 +25,8 @@ def train_with_kfold(model_name, X_train, Y_train, X_test, Y_test, callbacks, us
     # If there is a file called 'Models/<model_name>_best_model_final.h5', delete it (to save the best model)
     if os.path.isfile(f'Models/{model_name}/best_model_final.h5'):
         os.remove(f'Models/{model_name}/best_model_final.h5')
+    # Create the directory if it doesn't exist
+    os.makedirs(f'Models/{model_name}', exist_ok=True)
 
     # If the use_kfold parameter is False, just use one fold
     split = [[[train_index, val_index] for train_index, val_index in kf.split(X_train)][0]] if not use_kfold else kf.split(X_train)
