@@ -11,7 +11,7 @@ import sys
 from time import time
 import numpy as np
 
-def pipeline(model_name, use_kfold=False, return_test_preds=True, num_past_windows=None, X_train=None, X_test=None, Y_train=None, Y_test=None, Y_scaler=None):
+def pipeline(model_name, use_kfold=False, return_test_preds=True, num_past_windows=None, X_train=None, X_test=None, Y_train=None, Y_test=None, Y_scaler=None, model_params=None):
 
     if num_past_windows:
         # Generate the data
@@ -61,7 +61,7 @@ def pipeline(model_name, use_kfold=False, return_test_preds=True, num_past_windo
     stdout = sys.stdout
 
     # Train the model with KFold
-    results, all_history = train_with_kfold(model_name, X_train, Y_train, X_test, Y_test, callbacks, use_kfold)
+    results, all_history = train_with_kfold(model_name, X_train, Y_train, X_test, Y_test, callbacks, use_kfold, model_parameters=model_params)
 
     # Mark the end time of the training
     end_time = time()
@@ -72,7 +72,7 @@ def pipeline(model_name, use_kfold=False, return_test_preds=True, num_past_windo
     print("Results of the folds:", results)
 
     # Load the best model
-    model = build_model(model_name, X_train.shape[1:])
+    model = build_model(model_name, X_train.shape[1:], **model_params)
     model.load_weights(f'Models/{model_name}/best_model_final.h5')
 
     # Make predictions

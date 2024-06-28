@@ -4,7 +4,7 @@ from keras.callbacks import History
 from models import *
 import os
 
-def train_with_kfold(model_name, X_train, Y_train, X_test, Y_test, callbacks, use_kfold=True) -> tuple:
+def train_with_kfold(model_name, X_train, Y_train, X_test, Y_test, callbacks, use_kfold=True, model_parameters=None) -> tuple:
 
     # Redirect the output to a log file
     sys.stdout = open(f'Logs/{model_name}_training.log', 'a')
@@ -33,7 +33,7 @@ def train_with_kfold(model_name, X_train, Y_train, X_test, Y_test, callbacks, us
         Y_train_fold, Y_val_fold = Y_train[train_index], Y_train[val_index]
 
         # Build the model
-        model = build_model(model_name, X_train.shape[1:])
+        model = build_model(model_name, X_train.shape[1:], **model_parameters)
 
         print(model.summary())
 

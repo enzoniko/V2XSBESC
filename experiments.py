@@ -1,5 +1,5 @@
 
-
+import pickle
 
 def experiment_baselineModels_results_vs_past_windows_number():
 
@@ -40,6 +40,54 @@ def experiment_baselineModels_results_vs_past_windows_number():
 
         plot_error_vs_past_windows(results)
 
+
+
+parameters = {
+
+    'TCN': {
+        'num_filters': [16, 32, 64],
+        'kernel_size': [2, 3, 4],
+        'l2': [0.1, 0.01, 0.001],
+        'dense_units': [10, 50, 100]
+    },
+    'GRU': {
+        'units': [10, 50, 100],
+        'l2': [0.1, 0.01, 0.001],
+
+    },
+    'ANN': {
+        'units': [10, 30, 50, 70, 100],
+        'l2': [0.1, 0.01, 0.001]
+    }
+}
+
+parameters = {
+
+    'TCN': {
+        'num_filters': [16],
+        'kernel_size': [2],
+        'l2': [0.1],
+        'dense_units': [10, 50]
+    },
+    'GRU': {
+        'units': [10],
+        'l2': [0.1, 0.01],
+
+    },
+    'ANN': {
+        'units': [10],
+        'l2': [0.1, 0.01]
+    }
+}
+
+from itertools import product
+
+# Function to generate all combinations of hyperparameters
+def generate_combinations(param_grid):
+    keys, values = zip(*param_grid.items())
+    return [dict(zip(keys, combination)) for combination in product(*values)]
+
+
 def experiment_all_models_results_vs_past_windows_number():
 
     from preprocessing import preprocess
@@ -49,9 +97,9 @@ def experiment_all_models_results_vs_past_windows_number():
     from pipeline import pipeline
 
     # All possibilities of number of past_windows to experiment with
-    past_windows_possibilities = list(range(8, 15))
+    past_windows_possibilities = list(range(1, 6))
 
-    results = {
+    """ results = {
         'ANN': [],
         'LSTM': [],
         'GRU': [],
@@ -63,6 +111,20 @@ def experiment_all_models_results_vs_past_windows_number():
         "Random Forest": [],
         "Gradient Boosting": [],
         "MLP": []
+    } """
+
+    results = {
+        'Random Forest': [],
+        'TCN': [],
+        'GRU': [],
+        'ANN': []
+    }
+
+    best_parameters = {
+        'Random Forest': None,
+        'TCN': None,
+        'GRU': None,
+        'ANN': None
     }
 
     for past_windows in past_windows_possibilities:
@@ -73,27 +135,61 @@ def experiment_all_models_results_vs_past_windows_number():
 
         baseline_models = BaselineModels()
 
-        maes = baseline_models.train_and_evaluate(X_train_scaled, X_test_scaled, Y_train_scaled, Y_test_scaled, Y_scaler, past_windows)
+        # Adapted BaselineModels to only run Grid Search with RF, returning the best_parameters too
+        maes, best_parameters_RF = baseline_models.train_and_evaluate(X_train_scaled, X_test_scaled, Y_train_scaled, Y_test_scaled, Y_scaler, past_windows)
 
         for model_name, mae in maes.items():
-            if model_name in ['Random Forest', 'MLP']:
+            if model_name in ['Random Forest']:
                 results[model_name].append(mae)
 
+        best_parameters['Random Forest'] = (best_parameters_RF, past_windows)
+
         for model_name in ['TCN', 'GRU', 'ANN']:
-            try:
-                Y, Y_pred, error_all, error_test = pipeline(model_name, num_past_windows=past_windows, X_train=X_train_scaled, X_test=X_test_scaled, Y_train=Y_train_scaled, Y_test=Y_test_scaled, Y_scaler=Y_scaler)
-                results[model_name].append(error_test)
-            except:
-                results[model_name].append(-0.001)
+            param_grid = parameters[model_name]
+            combinations = generate_combinations(param_grid)
+            best_error = float('inf')
+            best_params = None
+
+            for params in combinations:
+                try:
+                    Y, Y_pred, error_all, error_test = pipeline(model_name, 
+                                                                num_past_windows=None, 
+                                                                X_train=X_train_scaled, 
+                                                                X_test=X_test_scaled, 
+                                                                Y_train=Y_train_scaled, 
+                                                                Y_test=Y_test_scaled, 
+                                                                Y_scaler=Y_scaler, 
+                                                                model_params = params,
+                                                                use_kfold=False)
+                    results[model_name].append(error_test)
+                
+                    if error_test < best_error:
+                        best_error = error_test
+                        best_params = params
+                except Exception as e:
+                    print(e)
+                    continue
+
+            results[model_name].append(best_error)
+            best_parameters[model_name] = (best_params, past_windows)
             
 
         plot_error_vs_past_windows(results)
 
+    # Save the best_parameters structure to disk
+    with open('best_parameters.pkl', 'wb') as f:
+        pickle.dump(best_parameters, f)
+
+    with open('best_results.pkl', 'wb') as f:
+        pickle.dump(results, f)
+
+    print("Best parameters have been saved to best_parameters.pkl")
+
 def main():
 
-    experiment_baselineModels_results_vs_past_windows_number()
+    #experiment_baselineModels_results_vs_past_windows_number()
 
-    #experiment_all_models_results_vs_past_windows_number()
+    experiment_all_models_results_vs_past_windows_number()
 
 if __name__ == "__main__":
     main()

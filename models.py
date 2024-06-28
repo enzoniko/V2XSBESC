@@ -101,8 +101,8 @@ class BaselineModels:
         }
 
         self.param_grid_RF = {
-            'n_estimators': [100],
-            'max_depth': [50]
+            'n_estimators': [5, 10, 15, 20, 50],
+            'max_depth': [5, 8, 10]
         }
 
     def reshape_to_2d(self, X, Y):
@@ -117,7 +117,7 @@ class BaselineModels:
             grid_search = GridSearchCV(estimator=model, param_grid=self.param_grid_RF, cv=5, scoring='neg_mean_absolute_error', n_jobs=1, verbose=2)
             grid_search.fit(X_train, Y_train)
             print(f"Best parameters for Random Forest: {grid_search.best_params_}")
-            return grid_search.best_estimator_
+            return grid_search.best_estimator_, grid_search.best_params_
         else:
             model.fit(X_train, Y_train)
             return model
@@ -150,7 +150,7 @@ class BaselineModels:
 
         for model_name, model in self.models.items():
             print(f"Training {model_name}...")
-            model = self.train_model(model, X_train, Y_train)
+            model, best_parameters = self.train_model(model, X_train, Y_train)
 
             # Save the model
             joblib.dump(model, f'Models/{model_name}/random_forest.joblib')
@@ -165,7 +165,7 @@ class BaselineModels:
 
             maes[model_name] = mae_test
 
-        return maes
+        return maes, best_parameters
 
 """ def build_ANN_model(input_shape, units=10, **kwargs):
     model = Sequential()
@@ -178,10 +178,10 @@ class BaselineModels:
  """
 
 # Simpler ANN model to attempt embedding
-def build_ANN_model(input_shape, units=10, **kwargs):
+def build_ANN_model(input_shape, units=10, l2=0.01, **kwargs):
     model = Sequential()
     model.add(Flatten(input_shape=input_shape))  # Flatten the input inside the model
-    model.add(Dense(units, activation='relu'))
+    model.add(Dense(units, activation='relu', kernel_regularizer=regularizers.l2(l2)))
     model.add(Dense(2))
     adam = Adam(learning_rate=0.0001)
     model.compile(optimizer=adam, loss='mae')
@@ -198,7 +198,7 @@ def build_LSTM_model(input_shape, units=50, **kwargs):
     model.compile(optimizer=adam, loss='mae')
     return model
 
-""" def build_GRU_model(input_shape, units=100, l2=0.0001, **kwargs):
+def build_GRU_model(input_shape, units=100, l2=0.0001, **kwargs):
     model = Sequential()
     model.add(GRU(units, activation='tanh', return_sequences=True, input_shape=input_shape, kernel_regularizer=regularizers.l2(l2)))
     model.add(BatchNormalization())
@@ -206,21 +206,21 @@ def build_LSTM_model(input_shape, units=50, **kwargs):
     model.add(Dense(2))
     adam = optimizers.Adam(clipvalue=0.5)
     model.compile(optimizer=adam, loss='mae')
-    return model """
+    return model
 
-# Simpler GRU model to attempt embedding
+""" # Simpler GRU model to attempt embedding
 def build_GRU_model(input_shape, units=10, l2=0.0001, **kwargs):
     model = Sequential()
     model.add(GRU(units, activation='relu', return_sequences=False, input_shape=input_shape))
     model.add(Dense(2))
     adam = optimizers.Adam(clipvalue=0.5)
     model.compile(optimizer=adam, loss='mae')
-    return model
+    return model """
 
-def build_TCN_model(input_shape, **kwargs):
+def build_TCN_model(input_shape, num_filters=16, kernel_size=3, l2=0.001, dense_units=100, **kwargs):
     model = Sequential()
-    model.add(TCN(nb_filters=64, kernel_size=3, activation='tanh', input_shape=input_shape, return_sequences=False))
-    model.add(Dense(100, activation='tanh', kernel_regularizer=regularizers.l2(0.01)))
+    model.add(TCN(nb_filters=num_filters, kernel_size=kernel_size, activation='tanh', input_shape=input_shape, return_sequences=False))
+    model.add(Dense(dense_units, activation='tanh', kernel_regularizer=regularizers.l2(l2)))
     model.add(Flatten())
     model.add(Dense(2, activation='tanh'))
     model.compile(optimizer='adam', loss='mae')
