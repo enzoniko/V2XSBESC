@@ -136,7 +136,7 @@ def find_optimal_window_sizes(variance_scores, window_sizes):
 
 
 
-    print(f"\nOPTIMAL WINDOW SIZES: \n{optimal_window_sizes}\n")
+    print(f"\nCV:{min_value} for OPTIMAL WINDOW SIZES: \n{optimal_window_sizes}\n")
     return [min(optimal_window_sizes)] if optimal_window_sizes else []
 
 # ----------------- END HELPER FUNCTIONS -----------------------------------------
@@ -366,10 +366,12 @@ def calculate_optimal_window_size_by_switches(df) -> float:
     plt.hist(mean_time_intervals, bins='sturges', color='skyblue', edgecolor='black')
     plt.axvline(mean_value, color='red', linestyle='dashed', linewidth=2, label=f'Mean: {mean_value:.2f}')
     plt.axvline(median_value, color='green', linestyle='dashed', linewidth=2, label=f'Median: {median_value:.2f}')
-    plt.title('Histogram of Mean Time Intervals')
-    plt.xlabel('Mean Time Interval (ms)')
-    plt.ylabel('Frequency')
-    plt.legend()
+    plt.title('Histogram of Mean Time Intervals', fontsize=18)
+    plt.xlabel('Mean Time Interval (ms)', fontsize=18)
+    plt.ylabel('Frequency', fontsize=18)
+    plt.xticks(fontsize=18)
+    plt.yticks(fontsize=18)
+    plt.legend(fontsize=18)
     plt.grid(True)
     plt.savefig(f'{DATA_PATH}histogram_mean_optimal_time_window_by_switches.png')
 

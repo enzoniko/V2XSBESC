@@ -6,6 +6,12 @@ import matplotlib.pyplot as plt
 WINDOW_SIZE = 14 # in miliseconds
 DATA_PATH = 'Data/data_with_noise/' # Leave the last slash
 
+# Sturges helper function
+def sturges(n: int):
+    result = np.ceil(np.log2(n))
+    return int(result) + 1
+
+
 def plot_summarized_durations(all_data):
 
     all_tx_durations = []
@@ -25,20 +31,55 @@ def plot_summarized_durations(all_data):
     # Plot the distribution of durations in subplots
     fig, axs = plt.subplots(3, 1, figsize=(10, 10))
 
-    axs[0].hist(all_tx_durations, bins=100, color='blue', log=True)
-    axs[0].set_title('TX Durations')
-    axs[0].set_xlabel('Duration (ms)')
-    axs[0].set_ylabel('Frequency')
+    num_bins = sturges(len(all_tx_durations))
+    axs[0].hist(all_tx_durations, bins=num_bins, color='blue', log=True)
+    axs[0].set_title('TX Durations', fontsize=18)
+    axs[0].set_xlabel('Duration (ms)', fontsize=18)
+    axs[0].set_ylabel('Frequency', fontsize=18)
+    axs[0].grid(True, linestyle='--', alpha=0.7)
+    axs[0].tick_params(axis='x', labelsize=18)
+    axs[0].tick_params(axis='y', labelsize=18)
 
-    axs[1].hist(all_rx_durations, bins=100, color='green', log=True)
-    axs[1].set_title('RX Durations')
-    axs[1].set_xlabel('Duration (ms)')
-    axs[1].set_ylabel('Frequency')
+    mean_tx = np.mean(all_tx_durations)
+    median_tx = np.median(all_tx_durations)
+    axs[0].axvline(mean_tx, color='black', linestyle='--', linewidth=2)
+    axs[0].axvline(median_tx, color='black', linestyle='solid', linewidth=2)
+   
 
-    axs[2].hist(all_idle_durations, bins=100, color='red', log=True)
-    axs[2].set_title('Idle Durations')
-    axs[2].set_xlabel('Duration (ms)')
-    axs[2].set_ylabel('Frequency')
+    num_bins = sturges(len(all_rx_durations))
+    axs[1].hist(all_rx_durations, bins=num_bins, color='green', log=True)
+    axs[1].set_title('RX Durations', fontsize=18)
+    axs[1].set_xlabel('Duration (ms)', fontsize=18)
+    axs[1].set_ylabel('Frequency', fontsize=18)
+    axs[1].grid(True, linestyle='--', alpha=0.7)
+    axs[1].tick_params(axis='x', labelsize=18)
+    axs[1].tick_params(axis='y', labelsize=18)
+
+    mean_rx = np.mean(all_rx_durations)
+    median_rx = np.median(all_rx_durations)
+    axs[1].axvline(mean_rx, color='black', linestyle='--', linewidth=2)
+    axs[1].axvline(median_rx, color='black', linestyle='solid', linewidth=2)
+  
+
+    num_bins = sturges(len(all_idle_durations))
+    axs[2].hist(all_idle_durations, bins=num_bins, color='red', log=True)
+    axs[2].set_title('Idle Durations', fontsize=18)
+    axs[2].set_xlabel('Duration (ms)', fontsize=18)
+    axs[2].set_ylabel('Frequency', fontsize=18)
+    axs[2].grid(True, linestyle='--', alpha=0.7)
+    axs[2].tick_params(axis='x', labelsize=18)
+    axs[2].tick_params(axis='y', labelsize=18)
+
+    mean_idle = np.mean(all_idle_durations)
+    median_idle = np.median(all_idle_durations)
+    axs[2].axvline(mean_idle, color='black', linestyle='--', linewidth=2, label=f'Mean')
+    axs[2].axvline(median_idle, color='black', linestyle='solid', linewidth=2, label=f'Median')
+
+    # Add legend outside the subplots
+    fig.legend(loc='upper right', fontsize=18)
+
+    plt.tight_layout()
+
 
     plt.savefig(f'{DATA_PATH}summarized_windowed_durations_histogram.png')
 
@@ -90,4 +131,4 @@ def generate_X_and_Y(num_past_windows: int = 1):
 
 if __name__ == "__main__":
 
-    generate_X_and_Y(num_past_windows=2)
+    generate_X_and_Y(num_past_windows=1)

@@ -8,3 +8,4 @@ tensorflow
 keras
 ydata_profiling
 keras-tcn
+xgboost

@@ -172,7 +172,7 @@ def generate_windows(df, window_size_in_seconds=WINDOW_SIZE_IN_SECONDS, num_proc
     manager = mp.Manager()
     lock = manager.Lock()
 
-    filename = f'{DATA_PATH}windows{window_size_in_seconds}s.hdf5'
+    filename = f'{DATA_PATH}windows{int(window_size_in_seconds*1000)}s.hdf5'
     try:
         os.remove(filename)
     except FileNotFoundError:

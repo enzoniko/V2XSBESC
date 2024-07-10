@@ -1,6 +1,6 @@
 import json
-from Data.clean_sim_data_and_separate_rx_and_idle import DATA_PATH
-
+DATA_PATH = 'Data/data_with_noise/'
+import matplotlib.pyplot as plt
 if __name__ == "__main__":
 
     # Open the file "General-#0.sca"
@@ -39,9 +39,27 @@ if __name__ == "__main__":
         # Store the end time in the dictionary
         vehicle_start_end[vehicle]["end"] = end_time
     
-    vehicles_less_10s = [vehicle for vehicle, times in vehicle_start_end.items() if times["end"] - times["start"] < 10]
-    print(f"Vehicles that took less than 10 seconds to complete the simulation: {[vehicle for vehicle in vehicles_less_10s]}")
+    vehicles_less_10s = [vehicle for vehicle, times in vehicle_start_end.items() if times["end"] - times["start"] < 28]
+    print(f"Vehicles that took less than 28 seconds to complete the simulation: {[vehicle for vehicle in vehicles_less_10s]}")
     print(f"Count: {len(vehicles_less_10s)}")
+
+    # Get the average time for all vehicles and the standard deviation
+    times = [times["end"] - times["start"] for times in vehicle_start_end.values()]
+    average_time = sum(times) / len(times)
+    std_dev = (sum((time - average_time) ** 2 for time in times) / len(times)) ** 0.5
+    print(f"Average time for all vehicles: {average_time}")
+    print(f"Standard deviation: {std_dev}")
+    
+    # Plot a histogram of the times
+    plt.hist(times, bins=20)
+    plt.xlabel("Time (s)")
+    plt.ylabel("Frequency")
+    plt.title("Histogram of Simulation Times")
+    plt.show()
+
+    # Print the number of vehicles
+    print(f"Number of vehicles: {len(vehicle_start_end)}")
+
     
     # Print the start and end times for each vehicle
     """ for vehicle, times in vehicle_start_end.items():

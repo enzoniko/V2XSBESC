@@ -11,7 +11,7 @@ import sys
 from time import time
 import numpy as np
 
-def pipeline(model_name, use_kfold=False, return_test_preds=True, num_past_windows=None, X_train=None, X_test=None, Y_train=None, Y_test=None, Y_scaler=None, model_params=None):
+def pipeline(model_name, use_kfold=False, return_test_preds=True, num_past_windows=None, X_train=None, X_test=None, Y_train=None, Y_test=None, Y_scaler=None, model_params={}):
 
     if num_past_windows:
         # Generate the data
@@ -93,11 +93,11 @@ def pipeline(model_name, use_kfold=False, return_test_preds=True, num_past_windo
     sys.stdout = stdout
 
     if return_test_preds:
-        return Y_test_descaled, Y_test_pred_descaled, error, error_test
+        return Y_test_descaled, Y_test_pred_descaled, error, error_test, error_test_std
     
-    return Y, Y_pred, error, error_test
+    return Y, Y_pred, error, error_test, error_test_std
 
 
 if __name__ == "__main__":
 
-    pipeline("GRU", use_kfold=False, return_test_preds=False, num_past_windows=None)
+    pipeline("ANN", use_kfold=False, return_test_preds=False, num_past_windows=1)

@@ -91,14 +91,56 @@ def plot_results(Y_test, predictions, model_name, mae_all, mae_test, mae_test_st
     plt.savefig(f"Images/{model_name}_error_histogram_with_{past_windows}_past_windows.png")
     plt.close()
 
-def plot_error_vs_past_windows(results):
-    plt.figure(figsize=(15, 15))
-    for model_name, maes in results.items():
-        plt.plot(maes, label=model_name)
+# Function to plot error histograms for multiple models
+# Function to plot error histograms for multiple models
+def plot_error_histograms(models_results, past_windows=1):
+    features = ['IDLE', 'RX']
     
-    plt.title("Error vs Past Windows")
-    plt.xlabel("Past Windows")
-    plt.ylabel("Mean Absolute Error")
-    plt.legend()
-    plt.savefig("Images/error_vs_past_windows.png")
+    plt.figure(figsize=(8, 10))
+
+    for i, feature in enumerate(features):
+        plt.subplot(2, 1, i + 1)
+        for model_name, results in models_results.items():
+            Y_test, predictions, mae_all, mae_test, mae_test_std = results
+            
+            # Calculate errors
+            errors = Y_test - predictions
+            plt.hist(errors[:, i], bins=sturges(len(errors)), alpha=0.7, edgecolor='black', label=model_name, histtype='stepfilled')
+
+        plt.title(f'Error Histogram for Feature {feature}', fontsize=18)
+        plt.xlabel('Error (ms)', fontsize=18)
+        plt.ylabel('Frequency', fontsize=18)
+        plt.xticks(fontsize=18)
+        plt.yticks(fontsize=18)
+        plt.grid(True, linestyle='--', alpha=0.7)
+        plt.legend(fontsize=18)
+
+    # Add a main title for the figure
+    plt.suptitle("Error Histograms for Multiple Models", fontsize=18, fontweight='bold', y=0.98)
+
+    # Adjust layout
+    plt.tight_layout(rect=[0, 0, 1, 0.95])  # Leave space for the main title
+
+    # Save the plot
+    plt.savefig(f"Images/error_histograms_with_{past_windows}_past_windows.png")
+    plt.close()
+
+def plot_error_vs_past_windows(results):
+    plt.figure(figsize=(10, 6))  # Adjust figure size for better presentation
+    markers = ['o', 's', '^', 'D', 'x', 'P']  # Marker styles for each model (add more if needed)
+    
+    for idx, (model_name, maes) in enumerate(results.items()):
+        past_windows = range(1, len(maes) + 1)
+        plt.plot(past_windows, maes, marker=markers[idx], markersize=8, label=model_name, linewidth=2)
+    
+    plt.title("Error vs Past Windows", fontsize=18)
+    plt.xlabel("Past Windows", fontsize=18)
+    plt.ylabel("Mean Absolute Error", fontsize=18)
+    plt.xticks(range(1, len(maes) + 1), fontsize=18)  # Adjust X-axis ticks
+    plt.yticks(fontsize=18)  # Adjust Y-axis ticks
+    plt.legend(fontsize=18)
+    plt.grid(True)
+    plt.tight_layout()  # Ensure tight layout for better spacing
+    plt.savefig("Images/error_vs_past_windows.png", dpi=300)  # Save with higher resolution
+    #plt.show()
     plt.close()
