@@ -16,5 +16,4 @@ venv/
 __pycache__/
 scpcommand
 *.data
-exporting/
 tmp/
