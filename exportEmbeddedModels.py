@@ -14,6 +14,8 @@ from keras.models import Model
 
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_absolute_error
+
+from xgboost import XGBRegressor
 # EMLEARN STUFF
 
 def convert_model(model, name, X_test, Y_test):
@@ -148,13 +150,40 @@ def export_model(model_name):
         print("Converting RF models, this takes a long time")
         convert_model(rf_feature1, 'rf1', X_test.reshape(X_test.shape[0], -1), Y_test[:, 0])
         convert_model(rf_feature2, 'rf2', X_test.reshape(X_test.shape[0], -1), Y_test[:, 1])
-        
+
+    elif model_name == 'XGB':
+
+        # Save flattened test data to text files
+        np.savetxt("exporting/XGB/X_test.txt", X_test.reshape(X_test.shape[0], -1))
+        np.savetxt("exporting/XGB/Y_test.txt", Y_test.reshape(X_test.shape[0], -1))
+
+        # Create XGBRegressor
+        xgb = XGBRegressor(n_jobs=24, n_estimators=100, max_depth=3)
+
+        # Fit the model
+        xgb.fit(X_train.reshape(X_train.shape[0], -1), Y_train)
+
+        # Predictions
+        Y_pred = xgb.predict(X_test.reshape(X_test.shape[0], -1))
+
+        # Calculate MAE
+        mae = mean_absolute_error(Y_test, Y_pred)
+
+        print("MAE for XGB model:", mae)
+
+        # Save the model
+        xgb.save_model('exporting/XGB/xgb_model.txt')
+
+
 if __name__ == '__main__':
 
     # Export ANN embedded model stuff
     #export_model('ANN')
 
     # Export RF embedded model stuff
-    export_model('RF')
+    #export_model('RF')
+
+    # Export XGB embedded model stuff
+    export_model('XGB')
     
     

@@ -85,7 +85,7 @@ def preprocess(randomize=False):
 if __name__ == "__main__":
 
     # Generate the data
-    generate_X_and_Y(6)
+    generate_X_and_Y(1)
 
     # Preprocess the data
     X_train_scaled, X_test_scaled, Y_train_scaled, Y_test_scaled, Y_scaler = preprocess()
