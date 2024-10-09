@@ -1,15 +1,6 @@
-def calculateMWfrommAh(mAh):
-    avg_voltage = 5.26
-
-    discharge_capacity = input("Enter the discharge capacity in mAh: ")
-    time_taken = input("Enter the time taken in minutes: ")
-
-    # Print power consumption in mW
-    mw = (float(discharge_capacity) / (float(time_taken) / 60)) * avg_voltage
-    print(f"Power consumption in mW: {mw}")
-
 def calculateAveragemAhperInference(mAh, experimentTime, inferenceTime):
-    baseline = 0.044375
+     # Hardcoded average Baseline power consumption in mAh
+    baseline = 44.375
 
     # Subtract the baseline power consumption from the total power consumption
     mAh = mAh - baseline
@@ -17,20 +8,63 @@ def calculateAveragemAhperInference(mAh, experimentTime, inferenceTime):
     # Transform inferenceTime from microseconds to seconds
     inferenceTime = inferenceTime / 1000000
     
-    # Calculate the number of inferences per second
-    inferences_per_second = 1 / inferenceTime
-    
+    # Calculate the number of inferences in the experiment
     inferences = (experimentTime * 60)/inferenceTime
+
     # Calculate the average mAh per inference
     average_mAh_per_inference = mAh/inferences
+
     print(f"Average mAh per inference: {average_mAh_per_inference}")
-    mAhtoJoules(average_mAh_per_inference, 5.26)
+
+    # Call the function to convert mAh to Joules and pass the average mAh per inference and the average voltage
+    mAhtoJoules(average_mAh_per_inference, 5.18)
+
 def mAhtoJoules(mAh, voltage):
 
     # Calculate the energy in Joules
     energy = mAh * voltage * 3.6
     print(f"Energy in Joules: {energy}")
+
 if __name__ == '__main__':
 
-    
-    calculateAveragemAhperInference(0.073, 5, 1.58)
+    # Average baseline total power consumption in mAh during 5 minutes:
+    # 44.375 mAh
+    # Average voltage in V:
+    # 5.18 V
+
+    # Average total power consumption in mAh for MLP (ANN) model:
+    # 72 mAh 
+    # Average inference time in microseconds for MLP (ANN) model:
+    # 0.58 microseconds +- 0.009 microseconds
+    # Experiment time in minutes: 5 minutes -> 300 seconds
+
+    # Average total power consumption in mAh for RF model:
+    # 73 mAh
+    # Average inference time in microseconds for RF model:
+    # 1.58 microseconds +- 0.02 microseconds
+    # Experiment time in minutes: 5 minutes -> 300 seconds
+
+    # Average total power consumption in mAh for XGB model:
+    # 82.5 mAh
+    # Average inference time in microseconds for XGB model:
+    # 3.44 microseconds +- 0.103 microseconds
+    # Experiment time in minutes: 5 minutes -> 300 seconds
+
+    # Call the function to calculate the average mAh per inference and pass the average total power consumption in mAh, the experiment time in minutes and the average inference time in microseconds
+    # We could improve this by adding the standard deviation of the inference time as a parameter 
+    # This would allow us to calculate the average mAh per inference with a confidence interval
+
+
+    # FOR MLP MODEL
+    print("MLP MODEL:", end=" ")
+    calculateAveragemAhperInference(72, 5, 0.58)
+    print()
+
+    # FOR RF MODEL
+    print("RF MODEL:", end=" ")
+    calculateAveragemAhperInference(73, 5, 1.58)
+    print()
+
+    # FOR XGB MODEL
+    print("XGB MODEL:", end=" ")
+    calculateAveragemAhperInference(82.5, 5, 3.44)

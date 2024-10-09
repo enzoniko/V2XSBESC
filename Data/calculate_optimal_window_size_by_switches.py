@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import gc
 import multiprocessing as mp
 
-DATA_PATH = 'Data/data_with_noise/' # Leave the last slash
+DATA_PATH = 'Data/iot/' # Leave the last slash
 
 # ---------------- HELPER FUNCTIONS FOR THE CODES THAT CALCULATE THE OPTIMAL WINDOW SIZE BY SWITCHES ------------------------
 
@@ -209,6 +209,7 @@ def sturges(n: int):
     return mean_time_interval_ms """
 
 def process_vehicle(group, window_sizes):
+    #print(f"Processing vehicle: {group['vehicle'].values[0]}", flush=True)
     start_time = time.time()
     # Get the vecvalues for rxStart, rxEnd, idleStart, idleEnd, txStart, and txEnd if they exist
     rx_start = group.loc[group['name'] == 'rxStart', 'vecvalue'].values
@@ -217,6 +218,9 @@ def process_vehicle(group, window_sizes):
     idle_end = group.loc[group['name'] == 'idleEnd', 'vecvalue'].values
     tx_start = group.loc[group['name'] == 'txStart', 'vecvalue'].values
     tx_end = group.loc[group['name'] == 'txEnd', 'vecvalue'].values
+
+    switching_start = group.loc[group['name'] == 'switchingStart', 'vecvalue'].values
+    switching_end = group.loc[group['name'] == 'switchingEnd', 'vecvalue'].values
     
     # Convert them to list of float by splitting the string if they exist
     rx_start = list(map(float, rx_start[0].split())) if len(rx_start) > 0 else []
@@ -226,9 +230,16 @@ def process_vehicle(group, window_sizes):
     tx_start = list(map(float, tx_start[0].split())) if len(tx_start) > 0 else []
     tx_end = list(map(float, tx_end[0].split())) if len(tx_end) > 0 else []
 
+    switching_start = list(map(float, switching_start[0].split())) if len(switching_start) > 0 else []
+    switching_end = list(map(float, switching_end[0].split())) if len(switching_end) > 0 else []
+
+    print(f"Vehicle: {group['vehicle'].values[0]} - RX Start: {len(rx_start)} - RX End: {len(rx_end)} - Idle Start: {len(idle_start)} - Idle End: {len(idle_end)} - TX Start: {len(tx_start)} - TX End: {len(tx_end)} - Switching Start: {len(switching_start)} - Switching End: {len(switching_end)}", flush=True)
+    print(f"First RX Start: {rx_start[0]} - First RX End: {rx_end[0]} - First Idle Start: {idle_start[0]} - First Idle End: {idle_end[0]} - First TX Start: {tx_start[0]} - First TX End: {tx_end[0]} - First Switching Start: {switching_start[0]} - First Switching End: {switching_end[0]}", flush=True)
+    print(f"Last RX Start: {rx_start[-1]} - Last RX End: {rx_end[-1]} - Last Idle Start: {idle_start[-1]} - Last Idle End: {idle_end[-1]} - Last TX Start: {tx_start[-1]} - Last TX End: {tx_end[-1]} - Last Switching Start: {switching_start[-1]} - Last Switching End: {switching_end[-1]}", flush=True)
+          
+    
     # Combine _start data into a single list of tuples (mode, time)
-    start = [(mode, time * 1000) if mode != 'tx' else (mode, time / 1000) 
-            for mode, time in zip(['rx'] * len(rx_start) + ['idle'] * len(idle_start) + ['tx'] * len(tx_start), 
+    start = [(mode, time * 1000) for mode, time in zip(['rx'] * len(rx_start) + ['idle'] * len(idle_start) + ['tx'] * len(tx_start), 
                                 rx_start + idle_start + tx_start)]
 
     # Sort data by time and save the new order to apply to _end data
@@ -236,8 +247,7 @@ def process_vehicle(group, window_sizes):
     start = [start[i] for i in index_order]
 
     # Combine _end data into a single list of tuples (mode, time)
-    end = [(mode, time * 1000) if mode != 'tx' else (mode, time / 1000) 
-        for mode, time in zip(['rx'] * len(rx_end) + ['idle'] * len(idle_end) + ['tx'] * len(tx_end), 
+    end = [(mode, time * 1000) for mode, time in zip(['rx'] * len(rx_end) + ['idle'] * len(idle_end) + ['tx'] * len(tx_end), 
                                 rx_end + idle_end + tx_end)]
 
     # Sort data by time using the order from the _start data
@@ -249,6 +259,8 @@ def process_vehicle(group, window_sizes):
 
     # Calculate durations by subtracting the second column of end from the second column of start but keep the mode
     durations = np.column_stack((start[:, 0], end[:, 1].astype(float) - start[:, 1].astype(float)))
+
+    print(f"Vehicle: {group['vehicle'].values[0]} - DURATIONS: {durations}", flush=True)
 
     durations_df = pd.DataFrame(durations, columns=['mode', 'duration'])
     durations_df['duration'] = durations_df['duration'].apply(float)
@@ -345,7 +357,7 @@ def calculate_optimal_window_size_by_switches(df) -> float:
 
     # Use multiprocessing Pool to parallelize vehicle processing
     with mp.Pool(processes=mp.cpu_count()) as pool:
-        results = [pool.apply_async(process_vehicle, args=(group, range(30, 2001, 10))) for _, group in grouped_df]
+        results = [pool.apply_async(process_vehicle, args=(group, range(10, 30, 5))) for _, group in grouped_df]
 
         mean_time_intervals = []
         for result in results:
@@ -424,7 +436,7 @@ def reduce_mem_usage(df):
 if __name__ == "__main__":
 
     # Calculate the optimal window size
-    separated_rx_idle_path = f"{DATA_PATH}separated_rx_idle_results.csv"
+    separated_rx_idle_path = f"{DATA_PATH}Castalia-Trace-ASYNCTSTP-1.csv"
     df = pd.read_csv(separated_rx_idle_path)
     df = reduce_mem_usage(df)
     #optimal_window_size_in_ms = calculate_optimal_window_size(df)

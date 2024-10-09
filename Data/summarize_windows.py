@@ -5,8 +5,8 @@ import numpy as np
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import multiprocessing
 
-WINDOW_SIZE = 14 # in miliseconds
-DATA_PATH = 'Data/data_with_noise/' # Leave the last slash
+WINDOW_SIZE = 13300 # in miliseconds
+DATA_PATH = 'Data/iot/' # Leave the last slash
 
 
 def process_vehicle_chunk(vehicle_keys, input_file_path, output_file_path, lock):

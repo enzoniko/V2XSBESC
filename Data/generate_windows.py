@@ -6,8 +6,8 @@ import h5py
 import gc
 import psutil
 import random 
-WINDOW_SIZE_IN_SECONDS = 14 # seconds
-DATA_PATH = 'Data/data_with_noise/' # Leave the last slash
+WINDOW_SIZE_IN_SECONDS = 13.3 # seconds
+DATA_PATH = 'Data/iot/' # Leave the last slash
 
 def process_vehicle(vehicle, group, window_size_in_ms):
     #print(f"Processing Vehicles", flush=True)
@@ -26,11 +26,11 @@ def process_vehicle(vehicle, group, window_size_in_ms):
     tx_start = list(map(float, tx_start[0].split())) if len(tx_start) > 0 else []
     tx_end = list(map(float, tx_end[0].split())) if len(tx_end) > 0 else []
 
-    start = [(mode, time * 1000) if mode != 'tx' else (mode, time / 1000) for mode, time in zip(['rx'] * len(rx_start) + ['idle'] * len(idle_start) + ['tx'] * len(tx_start), rx_start + idle_start + tx_start)]
+    start = [(mode, time * 1000) for mode, time in zip(['rx'] * len(rx_start) + ['idle'] * len(idle_start) + ['tx'] * len(tx_start), rx_start + idle_start + tx_start)]
     index_order = np.argsort([time for mode, time in start])
     start = [start[i] for i in index_order]
 
-    end = [(mode, time * 1000) if mode != 'tx' else (mode, time / 1000) for mode, time in zip(['rx'] * len(rx_end) + ['idle'] * len(idle_end) + ['tx'] * len(tx_end), rx_end + idle_end + tx_end)]
+    end = [(mode, time * 1000) for mode, time in zip(['rx'] * len(rx_end) + ['idle'] * len(idle_end) + ['tx'] * len(tx_end), rx_end + idle_end + tx_end)]
 
     if len(index_order) > len(end):
         raise ValueError(f"Index order length {len(index_order)} is greater than end length {len(end)} for vehicle {vehicle}")
@@ -250,7 +250,7 @@ def reduce_mem_usage(df):
 if __name__ == "__main__":
 
     # Generate windows
-    separated_rx_idle_path = f"{DATA_PATH}separated_rx_idle_results.csv"
+    separated_rx_idle_path = f"{DATA_PATH}Castalia-Trace-ASYNCTSTP-0.csv"
     df = pd.read_csv(separated_rx_idle_path)
     df = reduce_mem_usage(df)
     generate_windows(df)

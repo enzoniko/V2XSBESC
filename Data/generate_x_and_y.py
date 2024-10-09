@@ -3,8 +3,8 @@ import h5py
 from multiprocessing import Pool
 import matplotlib.pyplot as plt
 
-WINDOW_SIZE = 14 # in miliseconds
-DATA_PATH = 'Data/data_with_noise/' # Leave the last slash
+WINDOW_SIZE = 13300 # in miliseconds
+DATA_PATH = 'Data/iot/' # Leave the last slash
 
 # Sturges helper function
 def sturges(n: int):
