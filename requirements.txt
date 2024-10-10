@@ -9,3 +9,5 @@ keras
 ydata_profiling
 keras-tcn
 xgboost
+pyarrow
+fastparquet

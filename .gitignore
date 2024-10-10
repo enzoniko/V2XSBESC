@@ -18,3 +18,5 @@ scpcommand
 *.data
 tmp/
 Data/iot/*.txt
+*.parquet
+*.zip

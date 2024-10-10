@@ -28,10 +28,12 @@ def get_paths():
     return paths
     
 def generate_csv():
-    paths = ['Data/iot/Castalia-Trace-ASYNCTSTP-1.txt']
+    paths = get_paths()[:1]
+    print(paths)
     
     for path in paths:
         nodes = {}
+        print(f'Processing: {path}')
         
         with open(path, 'r') as f:
             data = f.readlines()
@@ -78,15 +80,8 @@ def generate_csv():
                 # Print the percentage of the file processed
                 print(f'Processing: {count / len(data) * 100:.2f}%', end='\r')
         
-        
-
-
-
         # Create a dataframe
         df = pd.DataFrame(columns=['name', 'vecvalue', 'vehicle'])
-
-        
-
         for key, items in nodes.items():
             
             # Calculate length difference between start and end
@@ -117,6 +112,18 @@ def generate_csv():
             df = pd.concat([df, pd.DataFrame({'name': ['switchingEnd'], 'vecvalue': [' '.join(items.switchingEnd)], 'vehicle': [key]})], ignore_index=True)
         
         df.to_csv(path.replace('.txt', '.csv'), index=False)
-            
+        # delete text file
+        os.remove(path)
+
+def csv_to_parquet():
+    # get all .csv files in the directory
+    for file in os.listdir('Data/iot/'):
+        if file.endswith('.csv'):
+            print(f'Compressing: {file}')
+            df = pd.read_csv('Data/iot/' + file)
+            df.to_parquet('Data/iot/' + file.replace('.csv', '.parquet'), index=False)
+            os.remove('Data/iot/' + file)
+
 if __name__ == '__main__':
     generate_csv()
+    csv_to_parquet()
