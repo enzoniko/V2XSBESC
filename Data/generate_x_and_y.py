@@ -3,8 +3,8 @@ import h5py
 from multiprocessing import Pool
 import matplotlib.pyplot as plt
 
-WINDOW_SIZE = 13300 # in miliseconds
-DATA_PATH = 'Data/iot/' # Leave the last slash
+WINDOW_SIZE = 14 # in miliseconds
+DATA_PATH = 'Data/data_with_noise/' # Leave the last slash
 
 # Sturges helper function
 def sturges(n: int):
@@ -112,15 +112,48 @@ def generate_X_and_Y(num_past_windows: int = 1):
     for vehicle_key, vehicle_data in all_data.items():
         if len(vehicle_data) < num_past_windows + 1:
             continue
-
-        for i in range(0, len(vehicle_data) - num_past_windows - 1, num_past_windows + 1):
+        
+        for i in range(0, len(vehicle_data) - num_past_windows - 1, 1): # changed step to 1 from num_past_windows + 1
             if i + num_past_windows < len(vehicle_data):
                 X.append(vehicle_data[i:i+num_past_windows])
-                idle, rx, _ = vehicle_data[i+num_past_windows]
+                idle, rx, tx = vehicle_data[i+num_past_windows]
                 Y.append((idle, rx))
+
+       
 
     X = np.array(X)
     Y = np.array(Y)
+
+    # Normalize the data
+    """ from sklearn.preprocessing import MinMaxScaler
+    X_scaler = MinMaxScaler()
+    X = X_scaler.fit_transform(X.reshape(-1, 3)).reshape(-1, num_past_windows, 3)
+    Y_scaler = MinMaxScaler()
+    Y = Y_scaler.fit_transform(Y) """
+
+    # Calculate the error of using the mean of the past windows as the prediction
+    maes_per_vehicle = []
+    for i in range(len(X)):
+        mean_idle = np.mean(X[i, :, 0])
+        mean_rx = np.mean(X[i, :, 1])
+        mae_idle = np.abs(mean_idle - Y[i, 0])
+        mae_rx = np.abs(mean_rx - Y[i, 1])
+
+        # Calculate the error of tx as 14000 - idle - rx
+        tx = 14000 - mean_idle - mean_rx
+        mae_tx = np.abs(tx - Y[i, 1])
+
+        maes_per_vehicle.append((mae_idle, mae_rx, mae_tx))
+    
+    maes_per_vehicle = np.array(maes_per_vehicle)
+    print(f"Mean MAE Idle: {np.mean(maes_per_vehicle[:, 0])}")
+    print(f"Mean MAE RX: {np.mean(maes_per_vehicle[:, 1])}")
+    print(f"Mean MAE TX: {np.mean(maes_per_vehicle[:, 2])}")
+    print(f"STD MAE Idle: {np.std(maes_per_vehicle[:, 0])}")
+    print(f"STD MAE RX: {np.std(maes_per_vehicle[:, 1])}")
+    print(f"STD MAE TX: {np.std(maes_per_vehicle[:, 2])}")
+
+
 
     plot_summarized_durations(all_data)
     print(f"X shape: {X.shape}")
@@ -128,6 +161,7 @@ def generate_X_and_Y(num_past_windows: int = 1):
 
     np.save(f'{DATA_PATH}X.npy', X)
     np.save(f'{DATA_PATH}Y.npy', Y)
+
 
 if __name__ == "__main__":
 

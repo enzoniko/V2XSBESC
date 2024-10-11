@@ -434,7 +434,6 @@ def reduce_mem_usage(df):
 
 
 if __name__ == "__main__":
-
     # Calculate the optimal window size
     separated_rx_idle_path = f"{DATA_PATH}Castalia-Trace-ASYNCTSTP-1.csv"
     df = pd.read_csv(separated_rx_idle_path)
