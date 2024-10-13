@@ -11,3 +11,4 @@ keras-tcn
 xgboost
 pyarrow
 fastparquet
+paretoset

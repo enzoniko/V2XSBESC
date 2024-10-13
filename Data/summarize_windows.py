@@ -5,7 +5,7 @@ import numpy as np
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import multiprocessing
 
-WINDOW_SIZE = 13300 # in miliseconds
+WINDOW_SIZE = 5400 # in miliseconds
 DATA_PATH = 'Data/iot/' # Leave the last slash
 
 
@@ -62,13 +62,13 @@ def sum_mode_durations_in_windows():
     print("Summarizing mode durations in windows")
     total_number_of_vehicles = 0
     # Remove the previous file if it exists
-    summarized_file_path = f'{DATA_PATH}windows{WINDOW_SIZE}s_summarized.hdf5'
+    summarized_file_path = f'{DATA_PATH}windows_{WINDOW_SIZE}ms_summarized.hdf5'
     try:
         os.remove(summarized_file_path)
     except FileNotFoundError:
         pass
 
-    input_file_path = f'{DATA_PATH}windows{WINDOW_SIZE}s.hdf5'
+    input_file_path = f'{DATA_PATH}windows_{WINDOW_SIZE}ms.hdf5'
     output_file_path = summarized_file_path
 
     with h5py.File(input_file_path, 'r') as input_file:

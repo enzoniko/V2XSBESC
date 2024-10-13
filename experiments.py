@@ -65,7 +65,7 @@ parameters = {
     }
 }
 
-""" parameters = {
+parameters = {
 
     'TCN': {
         'num_filters': [16],
@@ -82,7 +82,7 @@ parameters = {
         'units': [10],
         'l2': [0.1, 0.01]
     }
-} """
+}
 
 from itertools import product
 
@@ -136,14 +136,14 @@ def experiment_all_models_results_vs_past_windows_number():
     }
 
     for past_windows in past_windows_possibilities:
-        generate_X_and_Y(past_windows)
+        mae_moving_average = generate_X_and_Y(past_windows)
 
         # Load the dataframes
         X_train_scaled, X_test_scaled, Y_train_scaled, Y_test_scaled, Y_scaler = preprocess(randomize=True)
 
         baseline_models = BaselineModels()
 
-        """ # Adapted BaselineModels to only run Grid Search with RF, returning the best_parameters too
+        # Adapted BaselineModels to only run Grid Search with RF, returning the best_parameters too
         maes, best_parameters_all = baseline_models.train_and_evaluate(X_train_scaled, X_test_scaled, Y_train_scaled, Y_test_scaled, Y_scaler, past_windows)
 
         for model_name, mae in maes.items():
@@ -152,9 +152,9 @@ def experiment_all_models_results_vs_past_windows_number():
 
         for model_name, best_params in best_parameters_all.items():
             if model_name in ['Random Forest', 'XGBoost']:
-                best_parameters[model_name].append((best_params, past_windows, maes[model_name])) """
+                best_parameters[model_name].append((best_params, past_windows, maes[model_name]))
        
-        for model_name in ['CNN']:
+        for model_name in ['ANN']:
             param_grid = parameters[model_name]
             combinations = generate_combinations(param_grid)
             best_error = float('inf')
@@ -162,7 +162,7 @@ def experiment_all_models_results_vs_past_windows_number():
 
             for params in combinations:
                 try:
-                    Y, Y_pred, error_all, error_test = pipeline(model_name, 
+                    Y, Y_pred, error_all, error_test, error_test_std = pipeline(model_name, 
                                                                 num_past_windows=None, 
                                                                 X_train=X_train_scaled, 
                                                                 X_test=X_test_scaled, 

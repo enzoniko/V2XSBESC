@@ -3,8 +3,8 @@ import h5py
 from multiprocessing import Pool
 import matplotlib.pyplot as plt
 
-WINDOW_SIZE = 14 # in miliseconds
-DATA_PATH = 'Data/data_with_noise/' # Leave the last slash
+WINDOW_SIZE = 5400 # in miliseconds
+DATA_PATH = 'Data/iot/' # Leave the last slash
 
 # Sturges helper function
 def sturges(n: int):
@@ -81,11 +81,11 @@ def plot_summarized_durations(all_data):
     plt.tight_layout()
 
 
-    plt.savefig(f'{DATA_PATH}summarized_windowed_durations_histogram.png')
+    plt.savefig(f'{DATA_PATH}summarized_windowed_durations_histogram.pdf')
 
 def read_vehicle_data(vehicle_key):
     print('.', end='', flush=True)
-    filename = f'{DATA_PATH}windows{WINDOW_SIZE}s_summarized.hdf5'
+    filename = f'{DATA_PATH}windows_summarized_{WINDOW_SIZE}ms.hdf5'
     with h5py.File(filename, 'r') as file:
         vehicle_data = []
         for window_key in file[vehicle_key].keys():
@@ -97,7 +97,7 @@ def read_vehicle_data(vehicle_key):
 def generate_X_and_Y(num_past_windows: int = 1):
     print("Generating X and Y data")
 
-    filename = f'{DATA_PATH}windows{WINDOW_SIZE}s_summarized.hdf5'
+    filename = f'{DATA_PATH}windows_summarized_{WINDOW_SIZE}ms.hdf5'
     with h5py.File(filename, 'r') as file:
         print('-', end='', flush=True)
         vehicle_keys = list(file.keys())
@@ -123,25 +123,25 @@ def generate_X_and_Y(num_past_windows: int = 1):
 
     X = np.array(X)
     Y = np.array(Y)
-
+    from scipy.stats import skew, kurtosis
     # Normalize the data
-    """ from sklearn.preprocessing import MinMaxScaler
+    from sklearn.preprocessing import MinMaxScaler
     X_scaler = MinMaxScaler()
-    X = X_scaler.fit_transform(X.reshape(-1, 3)).reshape(-1, num_past_windows, 3)
+    X_ = X_scaler.fit_transform(X.reshape(-1, 3)).reshape(-1, num_past_windows, 3)
     Y_scaler = MinMaxScaler()
-    Y = Y_scaler.fit_transform(Y) """
+    Y_ = Y_scaler.fit_transform(Y)
 
     # Calculate the error of using the mean of the past windows as the prediction
     maes_per_vehicle = []
-    for i in range(len(X)):
-        mean_idle = np.mean(X[i, :, 0])
-        mean_rx = np.mean(X[i, :, 1])
-        mae_idle = np.abs(mean_idle - Y[i, 0])
-        mae_rx = np.abs(mean_rx - Y[i, 1])
+    for i in range(len(X_) - 1):
+        mean_idle = np.mean(X_[i, :, 0])
+        mean_rx = np.mean(X_[i, :, 1])
+        mae_idle = np.abs(mean_idle - Y_[i, 0])
+        mae_rx = np.abs(mean_rx - Y_[i, 1])
 
-        # Calculate the error of tx as 14000 - idle - rx
-        tx = 14000 - mean_idle - mean_rx
-        mae_tx = np.abs(tx - Y[i, 1])
+        mean_tx = np.mean(X_[i, :, 2])
+        tx_true = X_[i+1, 0, 2]
+        mae_tx = np.abs(mean_tx - tx_true)
 
         maes_per_vehicle.append((mae_idle, mae_rx, mae_tx))
     
@@ -152,6 +152,8 @@ def generate_X_and_Y(num_past_windows: int = 1):
     print(f"STD MAE Idle: {np.std(maes_per_vehicle[:, 0])}")
     print(f"STD MAE RX: {np.std(maes_per_vehicle[:, 1])}")
     print(f"STD MAE TX: {np.std(maes_per_vehicle[:, 2])}")
+    overall_mae = np.mean(maes_per_vehicle[:, :2])
+    print(f"Overall MAE: {overall_mae}")
 
 
 
@@ -162,7 +164,44 @@ def generate_X_and_Y(num_past_windows: int = 1):
     np.save(f'{DATA_PATH}X.npy', X)
     np.save(f'{DATA_PATH}Y.npy', Y)
 
+    # Calculate Mean, Median, Std, Skewness, and Kurtosis of X for rx, tx, and idle
+    print("Calculating statistics of X")
+    X = X.reshape(-1, 3)
+    mean_idle = np.mean(X[:, 0])
+    mean_rx = np.mean(X[:, 1])
+    mean_tx = np.mean(X[:, 2])
+    median_idle = np.median(X[:, 0])
+    median_rx = np.median(X[:, 1])
+    median_tx = np.median(X[:, 2])
+    std_idle = np.std(X[:, 0])
+    std_rx = np.std(X[:, 1])
+    std_tx = np.std(X[:, 2])
+    skew_idle = skew(X[:, 0])
+    skew_rx = skew(X[:, 1])
+    skew_tx = skew(X[:, 2])
+    kurt_idle = kurtosis(X[:, 0])
+    kurt_rx = kurtosis(X[:, 1])
+    kurt_tx = kurtosis(X[:, 2])
+    print(f"Mean Idle: {mean_idle}")
+    print(f"Mean RX: {mean_rx}")
+    print(f"Mean TX: {mean_tx}")
+    print(f"Median Idle: {median_idle}")
+    print(f"Median RX: {median_rx}")
+    print(f"Median TX: {median_tx}")
+    print(f"Std Idle: {std_idle}")
+    print(f"Std RX: {std_rx}")
+    print(f"Std TX: {std_tx}")
+    print(f"Skew Idle: {skew_idle}")
+    print(f"Skew RX: {skew_rx}")
+    print(f"Skew TX: {skew_tx}")
+    print(f"Kurt Idle: {kurt_idle}")
+    print(f"Kurt RX: {kurt_rx}")
+    print(f"Kurt TX: {kurt_tx}")
+
+    return overall_mae
+
+
 
 if __name__ == "__main__":
 
-    generate_X_and_Y(num_past_windows=1)
+    overall_mae = generate_X_and_Y(num_past_windows=2)
