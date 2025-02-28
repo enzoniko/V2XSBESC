@@ -42,7 +42,7 @@ def experiment_baselineModels_results_vs_past_windows_number():
 
 
 
-parameters = {
+""" parameters = {
 
     'TCN': {
         'num_filters': [16, 32, 64],
@@ -63,7 +63,7 @@ parameters = {
         'filters': [16, 32, 64],
         'l2': [0.1, 0.01, 0.001]
     }
-}
+} """
 
 parameters = {
 
@@ -80,7 +80,7 @@ parameters = {
     },
     'ANN': {
         'units': [10],
-        'l2': [0.1, 0.01]
+        'l2': [0.001]
     }
 }
 
@@ -101,7 +101,7 @@ def experiment_all_models_results_vs_past_windows_number():
     from pipeline import pipeline
 
     # All possibilities of number of past_windows to experiment with
-    past_windows_possibilities = list(range(1, 2))
+    past_windows_possibilities = list(range(1, 6))
 
     """ results = {
         'ANN': [],
@@ -120,19 +120,19 @@ def experiment_all_models_results_vs_past_windows_number():
     results = {
         'Random Forest': [],
         'XGBoost': [],
-        'TCN': [],
-        'GRU': [],
+        'Moving Average': [],
+        #'GRU': [],
         'ANN': [],
-        'CNN': []
+        #'CNN': []
     }
 
     best_parameters = {
         'Random Forest': [],
         'XGBoost': [], 
-        'TCN': [],
-        'GRU': [],
+        'Moving Average': [],
+        #'GRU': [],
         'ANN': [],
-        'CNN': []
+        #'CNN': []
     }
 
     for past_windows in past_windows_possibilities:
@@ -182,6 +182,9 @@ def experiment_all_models_results_vs_past_windows_number():
             results[model_name].append(best_error)
             best_parameters[model_name].append((best_params, past_windows, best_error))
             
+        # Save the moving average results too
+        results['Moving Average'].append(mae_moving_average)
+        best_parameters['Moving Average'].append((None, past_windows, mae_moving_average))
 
         plot_error_vs_past_windows(results)
 

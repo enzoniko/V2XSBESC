@@ -177,15 +177,26 @@ class BaselineModels:
             "XGBoost": XGBRegressor(n_jobs=2)
         }
 
-        self.param_grid_RF = {
+        """ self.param_grid_RF = {
             'n_estimators': [5, 10, 15, 20, 50],
             'max_depth': [5, 8, 10]
+        } """
+
+        self.param_grid_RF = {
+            'n_estimators': [50],
+            'max_depth': [5]
         }
 
-        self.param_grid_XGB = {
+        """ self.param_grid_XGB = {
             'n_estimators': [50, 100, 200],
             'max_depth': [3, 5, 7],
             'learning_rate': [0.001, 0.01, 0.1, 0.2]
+        } """
+
+        self.param_grid_XGB = {
+            'n_estimators': [100],
+            'max_depth': [3],
+            'learning_rate': [0.1]
         }
 
     def reshape_to_2d(self, X, Y):

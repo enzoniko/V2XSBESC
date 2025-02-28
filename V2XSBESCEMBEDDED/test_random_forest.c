@@ -29,13 +29,13 @@ int main(int argc, const char *argv[]) {
     rewind(X_test_file);  // Reset file pointer to start of file
 
     // Arrays to store data from files
-    float X_test[num_samples][6];  // Adjust dimensions based on your X_test.txt format
+    float X_test[num_samples][3];  // Adjust dimensions based on your X_test.txt format
     float Y_test[num_samples][2];  // Adjust dimensions based on your Y_test.txt format
 
     // Read X_test.txt and Y_test.txt data into arrays
     for (int i = 0; i < num_samples; i++) {
         // Read X_test.txt data
-        for (int j = 0; j < 6; j++) {
+        for (int j = 0; j < 3; j++) {
             if (fscanf(X_test_file, "%f", &X_test[i][j]) != 1) {
                 fprintf(stderr, "Error reading X_test.txt at line %d\n", i + 1);
                 return -1;
@@ -77,12 +77,12 @@ int main(int argc, const char *argv[]) {
     for (int i = 0; i < num_samples; i++) {
         // Predict using rf1 model
         const float features1[] = { X_test[i][0], X_test[i][1], X_test[i][2], X_test[i][3], X_test[i][4], X_test[i][5] };
-        float prediction1 = eml_trees_regress1(&rf1, features1, 6);
+        float prediction1 = eml_trees_regress1(&rf1, features1, 3);
         Y_pred[i][0] = prediction1;
 
         // Predict using rf2 model
         const float features2[] = { X_test[i][0], X_test[i][1], X_test[i][2], X_test[i][3], X_test[i][4], X_test[i][5] };
-        float prediction2 = eml_trees_regress1(&rf2, features2, 6);
+        float prediction2 = eml_trees_regress1(&rf2, features2, 3);
         Y_pred[i][1] = prediction2;
 
         // Calculate MAE for each feature

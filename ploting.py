@@ -129,11 +129,19 @@ def plot_error_vs_past_windows(results):
     plt.figure(figsize=(10, 6))  # Adjust figure size for better presentation
     markers = ['o', 's', '^', 'D', 'x', 'P']  # Marker styles for each model (add more if needed)
     
+    # Change the ANN name to MLP
+    results['MLP'] = results.pop('ANN')
+
+    # Ensure the order of models is Random Forest, MLP, XGBoost, and Moving Average
+    models_order = ['Random Forest', 'MLP', 'XGBoost', 'Moving Average']
+
+    results = {model_name: results[model_name] for model_name in models_order}
+
     for idx, (model_name, maes) in enumerate(results.items()):
         past_windows = range(1, len(maes) + 1)
         plt.plot(past_windows, maes, marker=markers[idx], markersize=8, label=model_name, linewidth=2)
     
-    plt.title("Error vs Past Windows", fontsize=18)
+    #plt.title("Error vs Past Windows", fontsize=18)
     plt.xlabel("Past Windows", fontsize=18)
     plt.ylabel("Mean Absolute Error", fontsize=18)
     plt.xticks(range(1, len(maes) + 1), fontsize=18)  # Adjust X-axis ticks
@@ -141,6 +149,6 @@ def plot_error_vs_past_windows(results):
     plt.legend(fontsize=18)
     plt.grid(True)
     plt.tight_layout()  # Ensure tight layout for better spacing
-    plt.savefig("Images/error_vs_past_windows.png", dpi=300)  # Save with higher resolution
+    plt.savefig("Images/error_vs_past_windows.pdf")  # Save with higher resolution
     #plt.show()
     plt.close()

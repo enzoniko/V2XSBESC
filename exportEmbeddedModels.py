@@ -37,7 +37,7 @@ def convert_model(model, name, X_test, Y_test):
     assert os.path.exists(model_filename)
     print(f"Generated {model_filename}")
 
-def build_ANN_model_flat(input_shape, units=10, **kwargs):
+def build_ANN_model_flat(input_shape, units=70, **kwargs):
         model = Sequential()
         model.add(Dense(units, activation='relu', input_shape=input_shape))
         model.add(Dense(2))
@@ -76,7 +76,7 @@ def export_model(model_name):
         model = build_ANN_model_flat(input_shape=(X_train.shape[1],))
 
         # To train the model
-        model.fit(X_train, Y_train, epochs=1500, callbacks=callbacks)
+        model.fit(X_train, Y_train, epochs=10, callbacks=callbacks)
         print(f"Model evaluation result: {model.evaluate(X_test, Y_test)}")
 
         # To use a trained model instead
@@ -125,11 +125,11 @@ def export_model(model_name):
         Y_train_feature2 = Y_train[:, 1]  # Second feature of Y
         
         # Create RandomForestRegressor for feature 1
-        rf_feature1 = RandomForestRegressor(n_jobs=24, n_estimators=50, max_depth=5, oob_score=True)
+        rf_feature1 = RandomForestRegressor(n_jobs=24, n_estimators=50, max_depth=10, oob_score=True)
         rf_feature1.fit(X_train.reshape(X_train.shape[0], -1), Y_train_feature1) 
 
         # Create RandomForestRegressor for feature 2
-        rf_feature2 = RandomForestRegressor(n_jobs=24, n_estimators=50, max_depth=5, oob_score=True)
+        rf_feature2 = RandomForestRegressor(n_jobs=24, n_estimators=50, max_depth=10, oob_score=True)
         rf_feature2.fit(X_train.reshape(X_train.shape[0], -1), Y_train_feature2)
 
         # Predictions for feature 1
@@ -158,7 +158,7 @@ def export_model(model_name):
         np.savetxt("exporting/XGB/Y_test.txt", Y_test.reshape(X_test.shape[0], -1))
 
         # Create XGBRegressor
-        xgb = XGBRegressor(n_jobs=24, n_estimators=100, max_depth=3)
+        xgb = XGBRegressor(n_jobs=24, n_estimators=200, max_depth=3)
 
         # Fit the model
         xgb.fit(X_train.reshape(X_train.shape[0], -1), Y_train)
@@ -178,10 +178,10 @@ def export_model(model_name):
 if __name__ == '__main__':
 
     # Export ANN embedded model stuff
-    #export_model('ANN')
+    export_model('ANN')
 
     # Export RF embedded model stuff
-    #export_model('RF')
+    export_model('RF')
 
     # Export XGB embedded model stuff
     export_model('XGB')

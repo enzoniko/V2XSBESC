@@ -8,18 +8,28 @@ np.bool = np.bool_
 
 import pickle
 from ploting import plot_error_vs_past_windows
-import pickle
-from ploting import plot_error_vs_past_windows
 def main():
 
 
     # Load the best_results from disk
-    with open('best_results.pkl', 'rb') as f:
+    with open('best_results_WSNwithoutMA.pkl', 'rb') as f:
         best_results = pickle.load(f)
 
     # Load the best_parameters from disk
-    with open('best_parameters.pkl', 'rb') as f:
+    with open('best_parameters_WSNwithoutMA.pkl', 'rb') as f:
         best_parameters = pickle.load(f)
+
+    print("BEST PARAMETERS: \n")
+    for model, parameters in best_parameters.items():
+        print(f"{model}:")
+        for paremeter in parameters:
+            print(f"Past windows: {paremeter[1]}, Parameters: {paremeter[0]}, MAE: {paremeter[2]}")
+
+    print('BEST RESULTS: \n')
+    for model, results in best_results.items():
+        print(f"{model}: {results}")
+    
+    best_results['Moving Average'] = [0.026421208307443426, 0.024737159819414583, 0.025895586481977723, 0.021785340542710033, 0.023720952221115737]
 
     # Load the best_results_all from disk
     with open('best_results_merged.pkl', 'rb') as f:
@@ -29,7 +39,8 @@ def main():
     with open('best_parameters_merged.pkl', 'rb') as f:
         best_parameters_all = pickle.load(f)
 
-    # Merge the dictionaries for best_results
+    plot_error_vs_past_windows(best_results)
+    """ # Merge the dictionaries for best_results
     merged_best_results = {
         'Random Forest': best_results_all.get('Random Forest', {}),
         'GRU': best_results_all.get('GRU', {}),
@@ -64,10 +75,10 @@ def main():
 
     # Save the merged structures to new .pkl files
     with open('best_parameters_all.pkl', 'wb') as f:
-        pickle.dump(merged_best_parameters, f)
+        pickle.dump(merged_best_parameters, f) 
 
     with open('best_results_all.pkl', 'wb') as f:
-        pickle.dump(merged_best_results, f)
+        pickle.dump(merged_best_results, f)"""
 
   
 if __name__ == "__main__":

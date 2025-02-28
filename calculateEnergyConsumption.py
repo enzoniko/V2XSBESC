@@ -1,6 +1,6 @@
 def calculateAveragemAhperInference(mAh, experimentTime, inferenceTime):
      # Hardcoded average Baseline power consumption in mAh
-    baseline = 44.375
+    baseline = 68
 
     # Subtract the baseline power consumption from the total power consumption
     mAh = mAh - baseline
@@ -17,7 +17,7 @@ def calculateAveragemAhperInference(mAh, experimentTime, inferenceTime):
     print(f"Average mAh per inference: {average_mAh_per_inference}")
 
     # Call the function to convert mAh to Joules and pass the average mAh per inference and the average voltage
-    mAhtoJoules(average_mAh_per_inference, 5.18)
+    mAhtoJoules(average_mAh_per_inference, 5.26)
 
 def mAhtoJoules(mAh, voltage):
 
@@ -57,14 +57,14 @@ if __name__ == '__main__':
 
     # FOR MLP MODEL
     print("MLP MODEL:", end=" ")
-    calculateAveragemAhperInference(72, 5, 0.58)
+    calculateAveragemAhperInference(84, 5, 2.82)
     print()
 
     # FOR RF MODEL
     print("RF MODEL:", end=" ")
-    calculateAveragemAhperInference(73, 5, 1.58)
+    calculateAveragemAhperInference(85, 5, 18.54)
     print()
 
     # FOR XGB MODEL
     print("XGB MODEL:", end=" ")
-    calculateAveragemAhperInference(82.5, 5, 3.44)
+    calculateAveragemAhperInference(93, 5, 3.44)
