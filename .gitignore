@@ -20,4 +20,4 @@ tmp/
 Data/iot/*.txt
 *.parquet
 *.zip
-#exporting/
+exporting/
